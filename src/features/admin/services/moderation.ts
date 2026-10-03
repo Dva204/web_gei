@@ -1,0 +1,13 @@
+import type { ChapterReport, Paginated, TakedownRequest } from '@/features/admin/types';
+import { chapterReports, chatReports, delay, moderationComments, takedowns, writeAudit } from '../mocks/store';
+function paged<T>(items:T[],q:{page?:number;pageSize?:number}):Paginated<T>{const page=q.page??1,size=q.pageSize??20;return{items:items.slice((page-1)*size,page*size),page,pageSize:size,total:items.length,totalPages:Math.ceil(items.length/size)}}
+export async function listModerationComments(q:{status?:string;page?:number;pageSize?:number}){await delay();return paged(moderationComments.filter(x=>!q.status||x.status===q.status),q)}
+export async function moderateComment(id:string,action:'approve'|'hide'|'delete'|'pin',note?:string){await delay();const i=moderationComments.findIndex(x=>x.id===id);if(i>=0){if(action==='delete')moderationComments.splice(i,1);else moderationComments[i].status=action==='approve'||action==='pin'?'visible':'hidden'}writeAudit(action,'comment',id,note??`Xử lý bình luận: ${action}`)}
+export async function listChapterReports(q:{status?:string;page?:number;pageSize?:number}){await delay();return paged(chapterReports.filter(x=>!q.status||x.status===q.status),q)}
+export async function updateChapterReport(id:string,patch:Partial<ChapterReport>){await delay();const i=chapterReports.findIndex(x=>x.id===id);if(i>=0)chapterReports[i]={...chapterReports[i],...patch};writeAudit('update','report',id,'Cập nhật báo lỗi')}
+export async function listTakedowns(q:{status?:string;page?:number;pageSize?:number}){await delay();return paged(takedowns.filter(x=>!q.status||x.status===q.status),q)}
+export async function updateTakedown(id:string,patch:Partial<TakedownRequest>&{logNote:string}){await delay();const i=takedowns.findIndex(x=>x.id===id);if(i>=0)takedowns[i]={...takedowns[i],...patch,log:[...takedowns[i].log,{at:new Date().toISOString(),by:'u1',action:patch.logNote}]};writeAudit('update','takedown',id,patch.logNote)}
+export async function hideStoryTemporarily(storyId:string){await delay();writeAudit('temporary_hide','story',storyId,'Gỡ tạm thời theo yêu cầu')}
+export async function listChatReports(q:{status?:string;page?:number;pageSize?:number}){await delay();return paged(chatReports.filter(x=>!q.status||x.status===q.status),q)}
+export async function moderateChat(action:'delete'|'mute'|'ban'|'purge_user',target:string,opts?:{note?:string}){await delay();writeAudit(action,'chat',target,opts?.note??`Xử lý chat: ${action}`)}
+export async function setRoomConfig(roomId:string,patch:Record<string,unknown>){await delay();writeAudit('room_config','chat_room',roomId,JSON.stringify(patch))}

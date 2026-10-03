@@ -1,1 +1,1 @@
-import { ModuleHub } from '@/components/admin/common/ModuleHub'; export default function Page(){return <ModuleHub kind="chat"/>}
+import { ModuleHub } from '@/features/admin/components/common/ModuleHub'; export default function Page(){return <ModuleHub kind="chat"/>}

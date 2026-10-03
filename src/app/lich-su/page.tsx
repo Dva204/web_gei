@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LocalStoryList } from '@/components/shared/LocalStoryList';
+import { LocalStoryList } from '@/features/library/components/LocalStoryList';
 export const metadata: Metadata = {
   title: 'Lịch sử đọc',
   robots: { index: false },

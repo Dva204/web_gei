@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { submitTakedown } from './actions';
+import { submitTakedown } from '../../features/admin/actions/takedown';
 
 export default function TakedownForm() {
   const [done, setDone] = useState(false);

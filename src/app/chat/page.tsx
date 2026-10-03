@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ChatPanel } from '@/components/chat/ChatPanel';
+import { ChatPanel } from '@/features/chat/components/ChatPanel';
 export const metadata: Metadata = {
   title: 'Phòng chat',
   robots: { index: false },

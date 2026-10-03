@@ -13,6 +13,8 @@
   --color-danger: var(--danger);
 }
 :root {
+  --story-status-full: #7ec8f8;
+  --story-status-updating: #ff9a9e;
   --font-ui: var(--font-be-vietnam);
   --font-heading: var(--font-be-vietnam);
   --font-read: var(--font-literata);

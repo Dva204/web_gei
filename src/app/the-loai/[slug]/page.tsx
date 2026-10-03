@@ -1,7 +1,7 @@
-import { genres, listStories } from '@/lib/data';
+import { genres, listStories } from '@/features/catalog/services';
 import { notFound } from 'next/navigation';
-import { StoryGrid } from '@/components/story/StoryGrid';
-import { Pagination } from '@/components/shared/Pagination';
+import { StoryGrid } from '@/features/catalog/components/StoryGrid';
+import { Pagination } from '@/shared/components/Pagination';
 export async function generateStaticParams() {
   return genres.map((g) => ({ slug: g.slug }));
 }

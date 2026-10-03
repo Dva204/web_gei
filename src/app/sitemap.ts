@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { listStories } from '@/lib/data';
+import { listStories } from '@/features/catalog/services';
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const d = await listStories({ pageSize: 100 });
   return [

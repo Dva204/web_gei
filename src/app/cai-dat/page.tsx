@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ThemePicker } from '@/components/theme/ThemePicker';
+import { ThemePicker } from '@/shared/components/theme/ThemePicker';
 import Link from 'next/link';
 export const metadata: Metadata = {
   title: 'Cài đặt',

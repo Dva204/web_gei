@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getStoryBySlug, getChaptersPage, getRelatedStories } from '@/lib/data';
-import { GeneratedCover } from '@/components/story/GeneratedCover';
-import { ChapterList } from '@/components/chapter/ChapterList';
-import { StoryGrid } from '@/components/story/StoryGrid';
-import { Pagination } from '@/components/shared/Pagination';
-import { BookmarkButton } from '@/components/story/BookmarkButton';
-import { CommentSection } from '@/components/story/CommentSection';
-import { AdSlot } from '@/components/ads/AdSlot';
-import { formatNumber } from '@/lib/utils/format';
+import { getStoryBySlug, getChaptersPage, getRelatedStories } from '@/features/catalog/services';
+import { GeneratedCover } from '@/features/catalog/components/GeneratedCover';
+import { ChapterList } from '@/features/catalog/components/ChapterList';
+import { StoryGrid } from '@/features/catalog/components/StoryGrid';
+import { Pagination } from '@/shared/components/Pagination';
+import { BookmarkButton } from '@/features/library/components/BookmarkButton';
+import { CommentSection } from '@/features/comments/components/CommentSection';
+import { AdSlot } from '@/features/advertising/components/AdSlot';
+import { formatNumber } from '@/shared/lib/utils/format';
 export const revalidate = 3600;
 export async function generateMetadata({
   params,

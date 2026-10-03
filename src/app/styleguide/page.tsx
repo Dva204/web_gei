@@ -1,5 +1,5 @@
-import { MODES } from '@/lib/theme/themes';
-import { GeneratedCover } from '@/components/story/GeneratedCover';
+import { MODES } from '@/shared/lib/theme/themes';
+import { GeneratedCover } from '@/features/catalog/components/GeneratedCover';
 export default function Styleguide() {
   if (process.env.NODE_ENV === 'production') return null;
   return (

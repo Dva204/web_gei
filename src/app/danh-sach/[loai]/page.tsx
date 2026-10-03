@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import { listStories } from '@/lib/data';
-import { StoryGrid } from '@/components/story/StoryGrid';
-import { Pagination } from '@/components/shared/Pagination';
-import type { Status } from '@/types/story';
+import { listStories } from '@/features/catalog/services';
+import { StoryGrid } from '@/features/catalog/components/StoryGrid';
+import { Pagination } from '@/shared/components/Pagination';
+import type { Status } from '@/features/catalog/types/story';
 export const revalidate = 1800;
 export const metadata: Metadata = { title: 'Danh sách truyện' };
 export default async function ListPage({

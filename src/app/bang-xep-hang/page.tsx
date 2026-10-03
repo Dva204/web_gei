@@ -1,4 +1,4 @@
-import { getRanking } from '@/lib/data';
+import { getRanking } from '@/features/catalog/services';
 import Link from 'next/link';
 export default async function Ranking({
   searchParams,

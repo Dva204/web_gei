@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getChapter, getStoryBySlug } from '@/lib/data';
-import { parseChapterParam } from '@/lib/utils/parseChapterParam';
-import { ChapterContent } from '@/components/chapter/ChapterContent';
-import { ReaderClient } from '@/components/reader/ReaderClient';
-import { AdSlot } from '@/components/ads/AdSlot';
+import { getChapter, getStoryBySlug } from '@/features/catalog/services';
+import { parseChapterParam } from '@/shared/lib/utils/parseChapterParam';
+import { ChapterContent } from '@/features/reader/components/ChapterContent';
+import { ReaderClient } from '@/features/reader/components/ReaderClient';
+import { AdSlot } from '@/features/advertising/components/AdSlot';
 export const revalidate = 3600;
 export async function generateMetadata({
   params,

@@ -6,7 +6,7 @@ const allowed = [
   'src\\app\\fonts.ts',
   'src/app/fonts.ts',
 ];
-const color = /(#[0-9a-fA-F]{3,8}\b|\brgb\()/g;
+const color = /(#[0-9a-fA-F]{3,8}\b|\brgb\()/;
 let bad = [];
 function walk(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {

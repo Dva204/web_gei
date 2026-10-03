@@ -1,0 +1,52 @@
+# Dependencies (keep package-lock.json in Git)
+node_modules/
+
+# Next.js and production outputs
+/.next/
+/out/
+/build/
+/dist/
+/.vercel/
+
+# Generated TypeScript files
+next-env.d.ts
+*.tsbuildinfo
+
+# Local environment and secrets (commit sanitized templates only)
+.env*
+!.env.example
+!.env.*.example
+!.env.template
+!.env.*.template
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Test outputs and tool caches
+/coverage/
+/test-results/
+/playwright-report/
+/blob-report/
+/.cache/
+/.vitest/
+.eslintcache
+.stylelintcache
+
+# Logs and temporary files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.temp
+*~
+
+# Local IDE and operating-system files
+/.idea/
+*.suo
+*.user
+.DS_Store
+Thumbs.db
+Desktop.ini

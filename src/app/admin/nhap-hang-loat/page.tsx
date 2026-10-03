@@ -1,1 +1,1 @@
-import { ImportManager } from '@/components/admin/import/ImportManager'; export default function Page(){return <ImportManager/>}
+import { ImportManager } from '@/features/admin/components/import/ImportManager'; export default function Page(){return <ImportManager/>}

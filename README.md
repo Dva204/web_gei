@@ -13,6 +13,7 @@ Mở `http://localhost:3000`. Kiểm tra chất lượng bằng:
 
 ```bash
 npm run typecheck
+npm run check:structure
 npm run lint
 npm test
 npm run check:tokens
@@ -37,24 +38,26 @@ npm run build
 ## Cấu trúc
 
 - `src/app`: route, metadata, sitemap và robots.
-- `src/components`: layout, truyện, chương, reader, chat, theme, ads và UI dùng lại.
-- `src/lib/data`: giao diện truy cập truyện/chương/xếp hạng.
-- `src/lib/comments`, `src/lib/chat`: giao diện dữ liệu bình luận và chat mock.
-- `src/lib/mock`: 24 truyện hư cấu, nội dung chương sinh theo seed và ghi chú nguồn.
-- `src/lib/storage`: schema dữ liệu localStorage.
+- `src/features`: module truyện, đọc chap, quảng cáo, admin, chat, bình luận, tủ truyện và đăng nhập; component/dữ liệu/kiểu đặt cùng tính năng.
+- `src/shared`: layout, UI, hook theme, tiện ích, SEO và kiểu dùng chung.
+- `src/server`: hạ tầng chỉ chạy trên server; Prisma client tại `db/prisma.ts`.
 - `src/styles/themes`: token màu cho giao diện Sáng/Tối và nền đọc.
+- `prisma`: schema database; `public`: asset tĩnh; `scripts`: công cụ kiểm tra.
+- `docs/specs`: `prompt.md` và `prompt2.md` được chuyển vào đây; `docs/screenshots`: ảnh tham khảo.
+
+Xem cây thư mục, vị trí sửa từng tính năng và quy ước client/server tại [docs/architecture.md](docs/architecture.md).
 
 ## Tùy chỉnh giao diện
 
-Website chỉ có hai giao diện `light` và `dark`. Màu sắc được định nghĩa tập trung trong `src/styles/themes/site.css`; danh sách lựa chọn nằm ở `src/lib/theme/themes.ts`. Sau khi chỉnh token, chạy `npm run check:tokens` và `npm run check:contrast`, rồi xem cả hai chế độ tại `/styleguide` trong môi trường development.
+Website chỉ có hai giao diện `light` và `dark`. Màu sắc được định nghĩa tập trung trong `src/styles/themes/site.css`; danh sách lựa chọn nằm ở `src/shared/lib/theme/themes.ts`. Sau khi chỉnh token, chạy `npm run check:tokens` và `npm run check:contrast`, rồi xem cả hai chế độ tại `/styleguide` trong môi trường development.
 
 ## Sửa dữ liệu mock
 
-Danh sách truyện nằm ở `src/lib/mock/stories.ts`; thể loại ở `src/lib/data/genres.ts`; nội dung chương viết tay ở `src/lib/mock/handwritten-chapters`; kho sinh chương ở `src/lib/mock/generators.ts`. Nội dung ngoài dự án, nếu có, phải được khai báo trong `src/lib/mock/SOURCES.md`.
+Danh sách truyện nằm ở `src/features/catalog/mocks/stories.ts`; thể loại ở `src/features/catalog/services/genres.ts`; nội dung chap viết tay ở `src/features/catalog/mocks/handwritten-chapters`; kho sinh chap ở `src/features/catalog/mocks/generators.ts`. Nội dung ngoài dự án, nếu có, phải được khai báo trong `src/features/catalog/mocks/SOURCES.md`.
 
 ## Thay mock bằng Supabase
 
-Giữ nguyên kiểu và chữ ký public. Đổi `DATA_SOURCE` và viết lại phần triển khai của `listStories`, `getStoryBySlug`, `getChaptersPage`, `getChapter`, `searchStories`, `listGenres`, `getRanking`, `getRelatedStories`; sau đó thay triển khai các hàm trong `lib/comments` và cung cấp một `ChatClient` mới. Component không cần thay đổi nếu kết quả trả về giữ đúng kiểu.
+Giữ nguyên kiểu và chữ ký public. Đổi `DATA_SOURCE` và viết lại phần triển khai của `listStories`, `getStoryBySlug`, `getChaptersPage`, `getChapter`, `searchStories`, `listGenres`, `getRanking`, `getRelatedStories` tại `features/catalog/services`; sau đó thay triển khai các hàm trong `features/comments/services` và cung cấp một `ChatClient` mới. Component không cần thay đổi nếu kết quả trả về giữ đúng kiểu.
 
 ## Chưa làm
 
@@ -75,7 +78,7 @@ Mở `/admin/dang-nhap`, dùng một trong các email mẫu dưới đây, mật
 
 Phiên đăng nhập và vai trò xem thử được giữ trong `localStorage`; đây chỉ là lớp trải nghiệm frontend, không phải bảo mật thật. Admin dùng cùng hai giao diện Sáng/Tối Neon của trang đọc và mặc định có mật độ compact. Trên mobile, mở sidebar bằng nút menu ở góc trái; nút đổi sáng/tối luôn nằm trên topbar.
 
-Mã admin được tách tại `src/app/admin`, `src/components/admin`, `src/lib/admin` và `src/types/admin.ts`. Khi thêm module mới, tạo route dưới `src/app/admin`, thêm mục điều hướng trong `AdminShell`, khai báo quyền ở `permissions.ts`, rồi chỉ gọi dữ liệu qua một hàm async trong `lib/admin`. Mọi hàm ghi phải gọi `writeAudit`.
+Route admin nằm tại `src/app/admin`; component, service, mock, quyền và kiểu dữ liệu được gom trong `src/features/admin`. Khi thêm module mới, tạo route dưới `src/app/admin`, thêm mục điều hướng trong `components/shell/AdminShell.tsx`, khai báo quyền ở `lib/permissions.ts`, rồi chỉ gọi dữ liệu qua một hàm async trong `services`. Mọi hàm ghi phải gọi `writeAudit`.
 
 Khi thay mock bằng Supabase, giữ nguyên chữ ký public và viết lại các lớp `stories`, `chapters`, `importer`, `moderation` và `operations`. Ánh xạ dữ liệu tới `profiles.role`, `chapter_versions`, `stories.rights_*`, `takedown_requests`, `ad_slots`, `ad_campaigns`, `affiliate_links`, `link_clicks`, `site_settings`, `audit_logs` và `moderation_rules`. Phân quyền thật bắt buộc phải được cưỡng chế ở backend bằng RLS; việc ẩn menu/nút ở frontend không phải biện pháp bảo mật.
 

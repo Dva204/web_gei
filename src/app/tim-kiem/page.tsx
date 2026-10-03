@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
-import { searchStories } from '@/lib/data';
-import { StoryGrid } from '@/components/story/StoryGrid';
-import { Pagination } from '@/components/shared/Pagination';
+import { searchStories } from '@/features/catalog/services';
+import { StoryGrid } from '@/features/catalog/components/StoryGrid';
+import { Pagination } from '@/shared/components/Pagination';
 export const metadata: Metadata = {
   title: 'Tìm kiếm',
   robots: { index: false },

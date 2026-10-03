@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PremiumDemo } from '@/components/ads/PremiumDemo';
+import { PremiumDemo } from '@/features/advertising/components/PremiumDemo';
 export const metadata: Metadata = {
   title: 'Trải nghiệm Premium mẫu',
   robots: { index: false, follow: false },

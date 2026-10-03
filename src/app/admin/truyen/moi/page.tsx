@@ -1,1 +1,1 @@
-import { StoryForm } from '@/components/admin/stories/StoryForm'; export default function Page(){return <StoryForm/>}
+import { StoryForm } from '@/features/admin/components/stories/StoryForm'; export default function Page(){return <StoryForm/>}

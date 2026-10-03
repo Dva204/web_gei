@@ -1,2 +1,2 @@
-import { StoriesManager } from '@/components/admin/stories/StoriesManager';
+import { StoriesManager } from '@/features/admin/components/stories/StoriesManager';
 export default function StoriesPage(){return <StoriesManager/>}

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AuthForm } from '@/components/shared/AuthForm';
+import { AuthForm } from '@/features/auth/components/AuthForm';
 export const metadata: Metadata = {
   title: 'Đăng nhập',
   robots: { index: false },

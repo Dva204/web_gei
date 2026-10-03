@@ -1,4 +1,4 @@
 import Link from 'next/link';
-import { adminUsers } from '@/lib/admin/mock/store';
-import { PageHeader } from '@/components/admin/common/AdminUI';
+import { adminUsers } from '@/features/admin/mocks/store';
+import { PageHeader } from '@/features/admin/components/common/AdminUI';
 export default async function Page({params}:{params:Promise<{id:string}>}){const{id}=await params,user=adminUsers.find(x=>x.id===id);if(!user)return <div className="admin-error"><h1>404</h1><p>Không tìm thấy người dùng.</p><Link className="btn" href="/admin/nguoi-dung">Quay lại</Link></div>;return <><PageHeader title={user.name} description="Hồ sơ, vai trò và lịch sử xử lý."/><section className="admin-card form-section"><div className="form-two"><div><small>Email</small><p>{user.email}</p></div><div><small>Vai trò</small><p>{user.role}</p></div><div><small>Trạng thái</small><p>{user.status}</p></div><div><small>2FA</small><p>{user.twoFactor?'Đã bật':'Chưa bật'}</p></div></div><button className="btn">Cảnh báo / xử phạt</button></section></>}

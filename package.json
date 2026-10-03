@@ -8,11 +8,17 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "check:structure": "node scripts/check-structure.mjs",
     "check:tokens": "node scripts/check-tokens.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "@tailwindcss/postcss": "latest",
     "clsx": "latest",
     "lucide-react": "latest",
@@ -28,6 +34,7 @@
     "eslint": "latest",
     "eslint-config-next": "latest",
     "prettier": "latest",
+    "prisma": "^6.19.0",
     "typescript": "latest",
     "vitest": "latest"
   }

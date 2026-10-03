@@ -3,11 +3,11 @@ import './globals.css';
 import '../styles/mobile.css';
 import '../styles/advertising.css';
 import { uiFont, readFont } from './fonts';
-import { noFlashScript } from '@/lib/theme/noFlashScript';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
-import { MobileNav } from '@/components/layout/MobileNav';
-import { ScrollToTop } from '@/components/shared/ScrollToTop';
+import { noFlashScript } from '@/shared/lib/theme/noFlashScript';
+import { Header } from '@/shared/components/layout/Header';
+import { Footer } from '@/shared/components/layout/Footer';
+import { MobileNav } from '@/shared/components/layout/MobileNav';
+import { ScrollToTop } from '@/shared/components/ScrollToTop';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://vuonngontinh.example'),
