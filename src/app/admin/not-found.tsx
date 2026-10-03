@@ -1,0 +1,1 @@
+import Link from 'next/link'; export default function NotFound(){return <div className="admin-error"><h1>404</h1><p>Không tìm thấy màn hình quản trị này.</p><Link className="btn btn-primary" href="/admin">Về tổng quan</Link></div>}

@@ -1,0 +1,26 @@
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+}
+:root {
+  --font-ui: var(--font-be-vietnam);
+  --font-heading: var(--font-be-vietnam);
+  --font-read: var(--font-literata);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --border-w: 1px;
+  --motion-fast: 180ms;
+  --space-unit: 8px;
+  --bg-pattern: none;
+}

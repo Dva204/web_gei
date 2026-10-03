@@ -1,0 +1,12 @@
+[data-reader-theme='site'] {
+  --reader-bg: var(--bg);
+  --reader-text: var(--text);
+}
+[data-reader-theme='light'] {
+  --reader-bg: #ffffff;
+  --reader-text: #18181b;
+}
+[data-reader-theme='dark'] {
+  --reader-bg: #0d0d0f;
+  --reader-text: #f4f4f5;
+}

@@ -1,0 +1,1 @@
+import { ChapterEditor } from '@/components/admin/chapters/ChapterWorkspace'; export default async function Page({params}:{params:Promise<{id:string;n:string}>}){const{id,n}=await params;return <ChapterEditor storyId={id} number={Number(n)}/>}
