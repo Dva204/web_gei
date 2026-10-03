@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StoryStatus {
+  ongoing
+  full
+  paused
+}
+
+enum StoryVisibility {
+  draft
+  public
+  hidden
+}
+
+enum EndingType {
+  HE
+  SE
+  OE
+}
+
+enum ChapterStatus {
+  draft
+  translating
+  editing
+  beta
+  ready
+  published
+  scheduled
+}
+
+enum RightsType {
+  own
+  agreement
+  public_domain
+  open_license
+  other
+}
+
+model Author {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  bio       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  stories   Story[]
+
+  @@index([name])
+}
+
+model Genre {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  stories     StoryGenre[]
+}
+
+model Story {
+  id              String          @id @default(cuid())
+  slug            String          @unique
+  title           String
+  synopsis        String          @db.Text
+  coverStorageKey String?
+  status          StoryStatus     @default(ongoing)
+  visibility      StoryVisibility @default(draft)
+  ending          EndingType?
+  rating          Decimal         @default(0) @db.Decimal(3, 2)
+  ratingCount     Int             @default(0)
+  views           BigInt          @default(0)
+  totalChapters   Int             @default(0)
+  latestChapter   Int             @default(0)
+  featured        Boolean         @default(false)
+  rightsType      RightsType?
+  rightsNote      String?         @db.Text
+  rightsExpiresAt DateTime?
+  seoTitle        String?
+  seoDescription  String?
+  authorId        String?
+  author           Author?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  genres          StoryGenre[]
+  chapters        Chapter[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([status, visibility])
+  @@index([updatedAt])
+  @@index([views])
+  @@index([featured, updatedAt])
+}
+
+model StoryGenre {
+  storyId String
+  genreId String
+  story   Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  genre   Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([storyId, genreId])
+  @@index([genreId, storyId])
+}
+
+model Chapter {
+  id          String        @id @default(cuid())
+  storyId     String
+  number      Int
+  title       String
+  content     String        @default("") @db.Text
+  wordCount   Int           @default(0)
+  status      ChapterStatus @default(draft)
+  publishAt   DateTime?
+  publishedAt DateTime?
+  story       Story         @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  pages       ChapterPage[]
+  versions    ChapterVersion[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([storyId, number])
+  @@index([storyId, status, number])
+  @@index([publishedAt])
+}
+
+model ChapterPage {
+  id         String   @id @default(cuid())
+  chapterId  String
+  pageNumber Int
+  storageKey String
+  width      Int
+  height     Int
+  fileSize   Int?
+  alt        String?
+  chapter    Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([chapterId, pageNumber])
+  @@index([chapterId, pageNumber])
+}
+
+model ChapterVersion {
+  id        String   @id @default(cuid())
+  chapterId String
+  content   String   @db.Text
+  note      String?
+  savedBy   String?
+  savedAt   DateTime @default(now())
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([chapterId, savedAt])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  storyId   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, storyId])
+  @@index([userId, createdAt])
+}
+
+model ReadingHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  storyId     String
+  chapter     Int
+  scrollRatio Float    @default(0)
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, storyId])
+  @@index([userId, updatedAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  objectType String
+  objectId   String
+  summary    String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([objectType, objectId])
+}
