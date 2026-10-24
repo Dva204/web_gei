@@ -1,7 +1,7 @@
 import { Eye } from 'lucide-react';
 import Link from 'next/link';
 import type { Story } from '@/features/catalog/types/story';
-import { GeneratedCover } from './GeneratedCover';
+import { StoryCover } from './StoryCover';
 import { formatNumber } from '@/shared/lib/utils/format';
 // Helper function to format dates to relative time or date string
 function formatTimeAgo(dateString: string) {
@@ -19,11 +19,11 @@ function formatTimeAgo(dateString: string) {
 
 export function StoryCard({ story, variant = 'list' }: { story: Story, variant?: 'list' | 'grid' }) {
   const chap1 = story.latestChapter;
-  const chap2 = story.latestChapter > 1 ? story.latestChapter - 1 : null;
+  const chap2 = story.recentChapters?.[1]?.number ?? null;
   
   // Try to determine updated times
-  const time1 = story.updatedAt ? formatTimeAgo(story.updatedAt) : '17 hours ago';
-  const time2 = story.updatedAt ? formatTimeAgo(new Date(new Date(story.updatedAt).getTime() - 24 * 60 * 60 * 1000).toISOString()) : '26/09/2026';
+  const time1 = formatTimeAgo(story.recentChapters?.[0]?.updatedAt || story.updatedAt);
+  const time2 = story.recentChapters?.[1] ? formatTimeAgo(story.recentChapters[1].updatedAt) : '';
 
   if (variant === 'grid') {
     return (
@@ -33,7 +33,7 @@ export function StoryCard({ story, variant = 'list' }: { story: Story, variant?:
           className="group block transition-transform hover:-translate-y-1"
         >
           <div className="relative">
-            <GeneratedCover title={story.title} index={Number(story.id)} />
+            <StoryCover title={story.title} cover={story.cover} id={story.id} />
             
             <div className={`absolute left-2 top-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase text-white shadow-sm ${story.status === 'full' ? 'bg-[var(--story-status-full)]' : 'bg-[var(--story-status-updating)]'}`}>
               {story.status === 'full' ? 'FULL' : 'Đang cập nhật'}
@@ -59,7 +59,7 @@ export function StoryCard({ story, variant = 'list' }: { story: Story, variant?:
   return (
     <article className="flex gap-4 p-3 hover:bg-surface-2 rounded-lg transition-colors border border-transparent hover:border-border">
       <Link href={`/truyen/${story.slug}`} className="block shrink-0 w-[100px] sm:w-[120px]">
-        <GeneratedCover title={story.title} index={Number(story.id)} />
+        <StoryCover title={story.title} cover={story.cover} id={story.id} />
       </Link>
       
       <div className="flex-1 flex flex-col justify-start overflow-hidden">
@@ -70,8 +70,8 @@ export function StoryCard({ story, variant = 'list' }: { story: Story, variant?:
             </h3>
           </div>
           <div className="flex items-center gap-1 text-sm text-yellow-400">
-            <span>{'⭐'.repeat(Math.floor(story.rating || 5))}</span>
-            <span className="text-text-muted ml-1 text-xs font-semibold">{story.rating || '5.0'}</span>
+            <span>{'⭐'.repeat(Math.floor(story.rating))}</span>
+            <span className="text-text-muted ml-1 text-xs font-semibold">{story.ratingCount ? story.rating : 'Chưa có đánh giá'}</span>
           </div>
         </Link>
         

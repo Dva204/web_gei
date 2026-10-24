@@ -1,7 +1,22 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { KeyRound, Leaf, ShieldCheck } from 'lucide-react';
-import { loginAdmin, verifyTwoFactor } from '@/features/admin/services/auth';
+import { KeyRound, Leaf } from 'lucide-react';
+import { loginAdmin } from '@/features/admin/services/auth';
 import { ADMIN_COPY } from '@/features/admin/lib/copy';
-export function LoginForm(){const router=useRouter();const[step,setStep]=useState<'login'|'2fa'>('login'),[email,setEmail]=useState('admin@vuon.local'),[password,setPassword]=useState('admin123'),[code,setCode]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setError('');try{if(step==='login'){await loginAdmin(email,password);setStep('2fa')}else{await verifyTwoFactor(code);router.replace('/admin')}}catch(err){setError(err instanceof Error?err.message:'Có lỗi xảy ra.')}finally{setBusy(false)}}return <div className="admin-login"><section className="admin-login-art"><span className="login-logo"><Leaf/></span><div><p>Không gian vận hành</p><h1>Nội dung tử tế bắt đầu từ một quy trình rõ ràng.</h1><span>Quản lý truyện, chương và cộng đồng trong một nơi yên tĩnh, dễ tập trung.</span></div></section><section className="admin-login-panel"><form className="admin-login-card" onSubmit={submit}><span className="login-icon">{step==='login'?<KeyRound/>:<ShieldCheck/>}</span><h2>{step==='login'?ADMIN_COPY.loginTitle:ADMIN_COPY.twoFactor}</h2><p>{step==='login'?ADMIN_COPY.loginHint:ADMIN_COPY.twoFactorHint}</p>{step==='login'?<><label>{ADMIN_COPY.email}<input type="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label>{ADMIN_COPY.password}<input type="password" value={password} onChange={e=>setPassword(e.target.value)} required/></label></>:<label>{ADMIN_COPY.code}<input inputMode="numeric" autoFocus maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))} placeholder="123456" required/></label>}{error&&<div className="admin-alert danger">{error}</div>}<button className="btn btn-primary" disabled={busy}>{busy?ADMIN_COPY.loading:step==='login'?ADMIN_COPY.continue:ADMIN_COPY.verify}</button><small>Tài khoản mẫu: admin@vuon.local · Mật khẩu bất kỳ<br/>Mã 2FA: 123456</small></form></section></div>}
+export function LoginForm() {
+  const [email, setEmail] = useState(''), [password, setPassword] = useState('');
+  const [error, setError] = useState(''), [busy, setBusy] = useState(false);
+  return <div className="admin-login"><section className="admin-login-art"><span className="login-logo"><Leaf /></span><div><p>Không gian vận hành</p><h1>Nội dung tử tế bắt đầu từ một quy trình rõ ràng.</h1><span>Quản lý truyện tranh, chap và cộng đồng trong một nơi dễ tập trung.</span></div></section>
+    <section className="admin-login-panel"><form className="admin-login-card" aria-busy={busy} onSubmit={async event => {
+      event.preventDefault(); if (busy) return; setBusy(true); setError('');
+      try { await loginAdmin(email, password); window.location.replace('/admin'); }
+      catch (error) { setError(error instanceof Error ? error.message : 'Không thể đăng nhập.'); }
+      finally { setBusy(false); }
+    }}><span className="login-icon"><KeyRound /></span><h2>{ADMIN_COPY.loginTitle}</h2><p>Đăng nhập bằng tài khoản được cấp quyền trên máy chủ.</p>
+      <label>Email<input type="email" autoComplete="email" maxLength={254} value={email} onChange={event => setEmail(event.target.value)} required /></label>
+      <label>Mật khẩu<input type="password" autoComplete="current-password" minLength={12} maxLength={128} value={password} onChange={event => setPassword(event.target.value)} required /></label>
+      {error && <div className="admin-alert danger" role="alert">{error}</div>}
+      <button className="btn btn-primary" disabled={busy}>{busy ? ADMIN_COPY.loading : 'Đăng nhập'}</button>
+      <small>Không có mật khẩu/OTP mẫu. Admin đầu tiên được tạo bằng CLI bootstrap; 2FA chưa được triển khai.</small>
+    </form></section></div>;
+}

@@ -1,1 +1,4 @@
-import { ModuleHub } from '@/features/admin/components/common/ModuleHub'; export default function Page(){return <ModuleHub kind="reports"/>}
+import { requireStaffPage } from '@/server/auth/authorization';
+import { ModuleHub } from '@/features/admin/components/common/ModuleHub'; export default async function Page(){
+await requireStaffPage('reports.view');
+return <ModuleHub kind="reports"/>}

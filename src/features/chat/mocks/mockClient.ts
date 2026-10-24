@@ -39,7 +39,7 @@ export const mockClient: ChatClient = {
   },
   async send(roomId, content, replyToId) {
     if (content.length > 300) return { ok: false, reason: 'too_long' };
-    messages.push({
+    const message: ChatMessage = {
       id: `m${Date.now()}`,
       roomId,
       user: { id: 'me', name: 'Khách đọc', role: 'member' },
@@ -47,8 +47,9 @@ export const mockClient: ChatClient = {
       replyToId,
       status: 'visible',
       createdAt: new Date().toISOString(),
-    });
-    return { ok: true };
+    };
+    messages.push(message);
+    return { ok: true, message };
   },
   async loadOlder(roomId, beforeId, limit) {
     const i = messages.findIndex((x) => x.id === beforeId);

@@ -3,7 +3,7 @@ import { StoryGrid } from '@/features/catalog/components/StoryGrid';
 import { AdSlot } from '@/features/advertising/components/AdSlot';
 import { copy } from '@/shared/lib/copy';
 import Link from 'next/link';
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 async function Shelf({
   title,
   genre,

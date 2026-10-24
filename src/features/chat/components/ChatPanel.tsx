@@ -1,19 +1,24 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { chatClient } from '@/features/chat/services';
+import { chatClient, reportChatMessage } from '@/features/chat/services';
 import type { ChatMessage, ChatRoom } from '@/features/chat/types';
 export function ChatPanel() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]),
-    [room, setRoom] = useState('chung'),
+    [room, setRoom] = useState(''),
     [messages, setMessages] = useState<ChatMessage[]>([]),
     [online, setOnline] = useState(0),
     [text, setText] = useState(''),
+    [notice, setNotice] = useState(''),
     end = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    chatClient.getRooms().then(setRooms);
-    chatClient.loadOlder(room, 'm999', 40).then(setMessages);
+    chatClient.getRooms().then((items) => { setRooms(items); setRoom((current) => current || items[0]?.id || ''); }).catch((error) => setNotice(error.message));
+  }, []);
+  useEffect(() => {
+    if (!room) return;
+    setMessages([]);
+    chatClient.loadOlder(room, '', 40).then(setMessages).catch((error) => setNotice(error.message));
     const unsub = chatClient.subscribe(room, (m) =>
-      setMessages((x) => [...x, m]),
+      setMessages((current) => current.some((item) => item.id === m.id) ? current : [...current, m]),
     );
     const presence = chatClient.onPresence(room, setOnline);
     return () => {
@@ -28,20 +33,16 @@ export function ChatPanel() {
   async function send() {
     if (!text.trim()) return;
     const value = text;
-    setText('');
+    setNotice('');
     const r = await chatClient.send(room, value);
-    if (r.ok)
-      setMessages((x) => [
-        ...x,
-        {
-          id: `local-${Date.now()}`,
-          roomId: room,
-          user: { id: 'me', name: 'Bạn', role: 'member' },
-          content: value,
-          status: 'visible',
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+    if (r.ok) { setText(''); setMessages((current) => [...current, r.message]); }
+    else setNotice(r.message || 'Chưa gửi được tin nhắn. Vui lòng đăng nhập và thử lại.');
+  }
+  async function report(id: string) {
+    const reason = window.prompt('Lý do báo cáo tin nhắn (ít nhất 5 ký tự):');
+    if (!reason) return;
+    try { await reportChatMessage(id, reason); setNotice('Đã gửi báo cáo tới quản trị viên.'); }
+    catch (error) { setNotice((error as Error).message); }
   }
   return (
     <div className="card grid min-h-[70vh] overflow-hidden md:grid-cols-[220px_1fr]">
@@ -85,11 +86,13 @@ export function ChatPanel() {
                 </time>
               </div>
               <p className="mt-2 whitespace-pre-wrap">{m.content}</p>
+              {m.status === 'visible' && <button className="btn mt-2 py-1 text-xs" onClick={() => void report(m.id)}>Báo cáo</button>}
             </article>
           ))}
           <div ref={end} />
         </div>
         <div className="border-t border-border p-3">
+          {notice && <p className="muted mb-2 text-sm" role="status">{notice}</p>}
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value.slice(0, 300))}

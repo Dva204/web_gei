@@ -1,71 +1,20 @@
-import { MessageCircle } from 'lucide-react';
-import { listComments } from '@/features/comments/services';
-import { submitComment } from '@/features/comments/actions/comments';
+'use client';
+import { useCallback, useEffect, useState } from 'react';
+import { Heart, MessageCircle, ShieldAlert } from 'lucide-react';
+import { likeComment, listComments, postComment, reportComment } from '@/features/comments/services';
+import type { Comment } from '@/features/comments/types';
 
-export async function CommentSection({ storyId }: { storyId: string }) {
-  const { items } = await listComments(storyId, { sort: 'new' });
-
-  const addComment = async (formData: FormData) => {
-    'use server';
-    const content = formData.get('content') as string;
-    if (content) {
-      await submitComment(storyId, content);
-    }
-  };
-
-  return (
-    <section className="section">
-      <h2 className="section-title flex items-center gap-2">
-        <MessageCircle size={24} />
-        Bình luận
-      </h2>
-      <div className="card p-4 sm:p-6 space-y-6">
-        <form action={addComment} className="flex gap-3">
-          <div className="h-10 w-10 shrink-0 rounded-full bg-accent/20 flex items-center justify-center font-bold text-accent">
-            U
-          </div>
-          <div className="flex-1 space-y-2">
-            <textarea
-              name="content"
-              required
-              className="w-full rounded-md border border-border bg-surface p-3 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-              rows={3}
-              placeholder="Bạn nghĩ gì về truyện này? Hãy chia sẻ nhé..."
-            />
-            <div className="flex justify-end">
-              <button type="submit" className="btn btn-primary px-6 py-2 text-sm">Gửi bình luận</button>
-            </div>
-          </div>
-        </form>
-
-        <div className="space-y-4 pt-4 border-t border-border">
-          {items.length === 0 ? (
-            <p className="text-sm text-text-muted text-center py-4">Chưa có bình luận nào. Hãy là người đầu tiên chia sẻ cảm nghĩ của bạn!</p>
-          ) : (
-            items.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
-                <div className="h-10 w-10 shrink-0 rounded-full bg-surface-2 flex items-center justify-center font-bold text-accent uppercase">
-                  {comment.user.name[0]}
-                </div>
-                <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="font-semibold text-sm">{comment.user.name}</span>
-                    <span className="text-xs text-text-muted">
-                      {new Date(comment.createdAt).toLocaleDateString('vi-VN')}
-                    </span>
-                    {comment.status === 'pending' && (
-                      <span className="text-[10px] text-warning bg-warning/10 px-2 py-0.5 rounded">Chờ duyệt</span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm leading-relaxed">
-                    {comment.content}
-                  </p>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-    </section>
-  );
+export function CommentSection({ storyId }: { storyId: string }) {
+  const [items, setItems] = useState<Comment[]>([]), [cursor, setCursor] = useState<string>();
+  const [content, setContent] = useState(''), [spoiler, setSpoiler] = useState(false);
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const load = useCallback(async (next?: string) => { try { const result = await listComments(storyId, { sort: 'new', cursor: next }); setItems((current) => next ? [...current, ...result.items] : result.items); setCursor(result.nextCursor); } catch (failure) { setError((failure as Error).message); } }, [storyId]);
+  useEffect(() => { void load(); }, [load]);
+  async function submit(event: React.FormEvent) { event.preventDefault(); if (busy || !content.trim()) return; setBusy(true); setError(''); try { const comment = await postComment({ storyId, content: content.trim(), isSpoiler: spoiler }); setItems((current) => [comment, ...current]); setContent(''); setSpoiler(false); } catch (failure) { setError((failure as Error).message); } finally { setBusy(false); } }
+  async function like(comment: Comment) { try { const result = await likeComment(comment.id); setItems((current) => current.map((item) => item.id === comment.id ? { ...item, likes: result.likes, likedByMe: result.liked } : item)); } catch (failure) { setError((failure as Error).message); } }
+  async function report(comment: Comment) { const reason = window.prompt('Lý do báo cáo bình luận (ít nhất 5 ký tự):'); if (!reason) return; try { await reportComment(comment.id, reason); setError('Đã gửi báo cáo để quản trị viên kiểm tra.'); } catch (failure) { setError((failure as Error).message); } }
+  return <section className="section"><h2 className="section-title flex items-center gap-2"><MessageCircle size={24}/>Bình luận</h2><div className="card p-4 sm:p-6 space-y-6">
+    <form onSubmit={submit} className="grid gap-3"><textarea required maxLength={2000} value={content} onChange={(event) => setContent(event.target.value)} className="w-full rounded-md border border-border bg-surface p-3 text-sm" rows={3} placeholder="Đăng nhập và chia sẻ cảm nghĩ của bạn…"/><div className="flex flex-wrap items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={spoiler} onChange={(event) => setSpoiler(event.target.checked)}/>Có nội dung tiết lộ</label><button disabled={busy} className="btn btn-primary px-6 py-2 text-sm">{busy ? 'Đang gửi…' : 'Gửi bình luận'}</button></div></form>
+    {error && <p className="text-sm text-text-muted" role="status">{error}</p>}<div className="space-y-4 border-t border-border pt-4">{!items.length ? <p className="py-4 text-center text-sm text-text-muted">Chưa có bình luận đã duyệt.</p> : items.map((comment) => <article key={comment.id} className="flex gap-3"><div className="h-10 w-10 shrink-0 rounded-full bg-surface-2 flex items-center justify-center font-bold text-accent">{comment.user.name[0]?.toUpperCase()}</div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><strong className="text-sm">{comment.user.name}</strong><small className="text-text-muted">{new Date(comment.createdAt).toLocaleDateString('vi-VN')}</small>{comment.pinned && <small>Đã ghim</small>}{comment.status === 'pending' && <small className="text-warning">Chờ duyệt · chỉ bạn thấy</small>}</div><p className={comment.isSpoiler ? 'mt-1 rounded bg-surface-2 p-2 text-sm' : 'mt-1 text-sm leading-relaxed'}>{comment.isSpoiler ? `Spoiler: ${comment.content}` : comment.content}</p>{comment.status === 'visible' && <div className="mt-2 flex gap-2"><button className="btn py-1 text-xs" onClick={() => void like(comment)}><Heart size={14} fill={comment.likedByMe ? 'currentColor' : 'none'}/> {comment.likes}</button><button className="btn py-1 text-xs" onClick={() => void report(comment)}><ShieldAlert size={14}/>Báo cáo</button></div>}</div></article>)}{cursor && <button className="btn w-full" onClick={() => void load(cursor)}>Xem thêm bình luận</button>}</div>
+  </div></section>;
 }

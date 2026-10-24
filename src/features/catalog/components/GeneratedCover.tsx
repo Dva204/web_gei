@@ -5,6 +5,7 @@ export function GeneratedCover({
   title: string;
   index?: number;
 }) {
+  index = Number.isFinite(index) ? index : Array.from(title).reduce((sum, char) => (sum + char.charCodeAt(0)) % 97, 0);
   return (
     <div
       className="relative flex aspect-[2/3] items-center justify-center overflow-hidden rounded-[var(--radius-md)] bg-[var(--mint-large)] p-4 text-center text-[var(--mint-ink)]"

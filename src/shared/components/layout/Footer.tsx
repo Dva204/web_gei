@@ -5,8 +5,8 @@ export function Footer() {
       <div className="container">
         <strong>Vườn Ngôn Tình</strong>
         <p className="muted mt-2 max-w-2xl text-sm">
-          Không gian đọc truyện chữ lành mạnh. Vui lòng liên hệ khi cần gửi yêu
-          cầu gỡ nội dung vi phạm.
+          Không gian đọc truyện tranh lành mạnh. Vui lòng liên hệ khi cần gửi
+          yêu cầu gỡ nội dung vi phạm.
         </p>
         <nav className="mt-5 flex flex-wrap gap-4 text-sm">
           <Link href="/dieu-khoan">Điều khoản</Link>

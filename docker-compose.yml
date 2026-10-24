@@ -6,9 +6,9 @@ services:
     environment:
       POSTGRES_DB: vuon_ngon_tinh
       POSTGRES_USER: vuon
-      POSTGRES_PASSWORD: vuon_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vuon_dev_password}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - vuon_postgres_data:/var/lib/postgresql/data
     healthcheck:

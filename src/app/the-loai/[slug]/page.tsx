@@ -1,10 +1,8 @@
-import { genres, listStories } from '@/features/catalog/services';
+import { getGenreBySlug, listStories } from '@/features/catalog/services';
 import { notFound } from 'next/navigation';
 import { StoryGrid } from '@/features/catalog/components/StoryGrid';
 import { Pagination } from '@/shared/components/Pagination';
-export async function generateStaticParams() {
-  return genres.map((g) => ({ slug: g.slug }));
-}
+export const dynamic = 'force-dynamic';
 export default async function GenrePage({
   params,
   searchParams,
@@ -14,7 +12,7 @@ export default async function GenrePage({
 }) {
   const { slug } = await params,
     { page = '1' } = await searchParams;
-  const genre = genres.find((g) => g.slug === slug);
+  const genre = await getGenreBySlug(slug);
   if (!genre) notFound();
   const d = await listStories({ genre: slug, page: Number(page) });
   return (

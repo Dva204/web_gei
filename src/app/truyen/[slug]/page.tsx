@@ -1,16 +1,22 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getStoryBySlug, getChaptersPage, getRelatedStories } from '@/features/catalog/services';
-import { GeneratedCover } from '@/features/catalog/components/GeneratedCover';
+import {
+  getStoryBySlug,
+  getChaptersPage,
+  getRelatedStories,
+} from '@/features/catalog/services';
+import { StoryCover } from '@/features/catalog/components/StoryCover';
 import { ChapterList } from '@/features/catalog/components/ChapterList';
 import { StoryGrid } from '@/features/catalog/components/StoryGrid';
 import { Pagination } from '@/shared/components/Pagination';
 import { BookmarkButton } from '@/features/library/components/BookmarkButton';
+import { ContinueReading } from '@/features/library/components/ContinueReading';
 import { CommentSection } from '@/features/comments/components/CommentSection';
 import { AdSlot } from '@/features/advertising/components/AdSlot';
 import { formatNumber } from '@/shared/lib/utils/format';
-export const revalidate = 3600;
+import { ViewTracker } from '@/features/analytics/components/ViewTracker';
+export const dynamic = 'force-dynamic';
 export async function generateMetadata({
   params,
 }: {
@@ -19,8 +25,8 @@ export async function generateMetadata({
   const s = await getStoryBySlug((await params).slug);
   return s
     ? {
-        title: s.title,
-        description: s.synopsis.slice(0, 155),
+        title: s.seoTitle || s.title,
+        description: s.seoDescription || s.synopsis.slice(0, 155),
         alternates: { canonical: `/truyen/${s.slug}` },
       }
     : { title: 'Không tìm thấy truyện' };
@@ -42,9 +48,10 @@ export default async function StoryPage({
   ]);
   return (
     <div className="container section">
+      <ViewTracker storyId={s.id} path={`/truyen/${slug}`} />
       <div className="grid gap-8 md:grid-cols-[220px_1fr] lg:grid-cols-[240px_1fr_300px]">
         <div className="relative mx-auto w-3/5 max-w-[240px] md:mx-0 md:w-full">
-          <GeneratedCover title={s.title} index={Number(s.id)} />
+          <StoryCover title={s.title} cover={s.cover} id={s.id} />
           <div className="absolute top-2 right-2">
             <BookmarkButton storyId={s.id} variant="icon" />
           </div>
@@ -57,11 +64,16 @@ export default async function StoryPage({
             {s.title}
           </h1>
           <p className="muted mt-3">Tác giả: {s.author}</p>
-          
+
           <p className="muted mt-3">
-            Tình trạng: {s.status === 'full' ? 'Hoàn thành' : s.status === 'paused' ? 'Tạm dừng' : 'Đang cập nhật'}
+            Tình trạng:{' '}
+            {s.status === 'full'
+              ? 'Hoàn thành'
+              : s.status === 'paused'
+                ? 'Tạm dừng'
+                : 'Đang cập nhật'}
           </p>
-          
+
           <div className="mt-2 flex flex-wrap items-center gap-5 text-sm">
             <span>⭐ {s.ratingCount ? s.rating : 'Chưa có đánh giá'}</span>
             <span>{formatNumber(s.views)} lượt đọc</span>
@@ -70,19 +82,21 @@ export default async function StoryPage({
           <div className="mt-3 flex flex-wrap gap-2">
             {s.genres.map((g) => (
               <Link key={g} className="chip" href={`/the-loai/${g}`}>
-                {g}
+                {s.genreLabels?.[g] || g}
               </Link>
             ))}
           </div>
           <p className="mt-6 leading-8 text-justify">{s.synopsis}</p>
           <p className="mt-4 text-sm">
             <span className="font-semibold">Link raw: </span>
-            <a href="#" className="text-accent hover:underline" target="_blank" rel="noopener noreferrer">
-              Đang cập nhật
-            </a>
+            <span className="muted">Đang cập nhật</span>
           </p>
           <div className="mt-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-            <Link className="btn btn-primary w-full" href={`/truyen/${slug}/chap-1`}>
+            <ContinueReading storyId={s.id} slug={slug} />
+            <Link
+              className="btn btn-primary w-full"
+              href={`/truyen/${slug}/chap-${s.firstChapter || 1}`}
+            >
               Đọc từ đầu
             </Link>
             <Link

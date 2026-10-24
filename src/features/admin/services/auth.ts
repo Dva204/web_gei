@@ -1,9 +1,19 @@
 'use client';
-import type { AdminUser, Role } from '@/features/admin/types';
-import { adminUsers } from '../mocks/store';
-const KEY = 'vuon-admin-session';
-export async function loginAdmin(email: string, _password: string): Promise<{pending: AdminUser}> { const user = adminUsers.find(u=>u.email===email) ?? adminUsers[0]; sessionStorage.setItem(KEY+'-pending',JSON.stringify(user)); return {pending:user}; }
-export async function verifyTwoFactor(code:string):Promise<AdminUser>{ if(code!=='123456') throw new Error('Mã xác thực không đúng.'); const raw=sessionStorage.getItem(KEY+'-pending'); if(!raw) throw new Error('Phiên đăng nhập đã hết hạn.'); localStorage.setItem(KEY,raw); window.dispatchEvent(new Event('admin-session')); return JSON.parse(raw) as AdminUser; }
-export function getAdminSession():AdminUser|null { if(typeof window==='undefined') return null; try { return JSON.parse(localStorage.getItem(KEY) ?? 'null') as AdminUser|null; } catch { return null; } }
-export function logoutAdmin(){localStorage.removeItem(KEY);window.dispatchEvent(new Event('admin-session'));}
-export function switchRole(role:Role){const current=getAdminSession()??adminUsers[0];localStorage.setItem(KEY,JSON.stringify({...current,role}));window.dispatchEvent(new Event('admin-session'));}
+import type { AdminUser } from '@/features/admin/types';
+import type { SessionUser } from '@/shared/lib/auth/types';
+import { authRequest, getSession, signOut } from '@/features/auth/services/client';
+// Memory is a UI hint only; server pages/APIs verify the cookie and current DB role.
+let current: AdminUser | null = null;
+export function setAdminSession(user: SessionUser | null) {
+  current = user && user.role !== 'member' ? { ...user, role: user.role, status: 'active', twoFactor: false } : null;
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('admin-session'));
+}
+export async function refreshAdminSession() {
+  const { user } = await getSession(); setAdminSession(user); return current;
+}
+export const getAdminSession = () => current;
+export async function loginAdmin(email: string, password: string) {
+  const { user } = await authRequest<{ user: SessionUser }>('/api/auth/login', { email, password, audience: 'admin' });
+  setAdminSession(user); return current;
+}
+export async function logoutAdmin() { await signOut(); setAdminSession(null); }

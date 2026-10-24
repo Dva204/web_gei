@@ -99,6 +99,7 @@ export function defaultAdvertising(): AdvertisingConfig {
         image: '',
         enabled: true,
         placements: ['home-affiliate', 'chapter-end'],
+        targetUrl: '',
       },
       {
         id: 'product-bookmark',
@@ -109,6 +110,7 @@ export function defaultAdvertising(): AdvertisingConfig {
         image: '',
         enabled: true,
         placements: ['home-affiliate', 'chapter-end'],
+        targetUrl: '',
       },
       {
         id: 'product-cup',
@@ -119,6 +121,7 @@ export function defaultAdvertising(): AdvertisingConfig {
         image: '',
         enabled: true,
         placements: ['home-affiliate'],
+        targetUrl: '',
       },
     ],
     revenue: [],

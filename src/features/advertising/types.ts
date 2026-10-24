@@ -45,6 +45,7 @@ export interface AffiliateProduct {
   image: string;
   enabled: boolean;
   placements: AdPlacement[];
+  targetUrl?: string;
 }
 export interface AdvertisingRevenue {
   id: string;
@@ -85,6 +86,7 @@ export interface AdvertisingConfig {
   revenue: AdvertisingRevenue[];
   events: AdvertisingEvent[];
   audit: AdvertisingAudit[];
+  serverRevision?: number;
 }
 export type AdSelection =
   | { source: 'direct'; campaign: AdvertisingCampaign }

@@ -16,6 +16,11 @@ export type Story = {
   views: number;
   totalChapters: number;
   latestChapter: number;
+  firstChapter?: number;
+  recentChapters?: { number: number; updatedAt: string }[];
+  genreLabels?: Record<string, string>;
+  seoTitle?: string;
+  seoDescription?: string;
   updatedAt: string;
   createdAt: string;
 };

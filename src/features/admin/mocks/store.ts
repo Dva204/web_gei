@@ -1,12 +1,8 @@
 import { stories } from '@/features/catalog/mocks/stories';
-import type { AdCampaign, AdSlotConfig, AdminUser, AffiliateLink, AuditLog, ChapterAdmin, ChapterReport, ChatReport, ManualRevenue, ModerationComment, SiteSettings, StoryAdmin, TakedownRequest } from '@/features/admin/types';
+import type { AdCampaign, AdSlotConfig, AffiliateLink, AuditLog, ChapterAdmin, ChapterReport, ChatReport, ManualRevenue, ModerationComment, SiteSettings, StoryAdmin, TakedownRequest } from '@/features/admin/types';
 
 const now = new Date('2026-10-03T08:00:00+07:00');
 const isoAgo = (days: number) => new Date(now.getTime() - days * 86400000).toISOString();
-export const adminUsers: AdminUser[] = [
-  ['u1','Mai An','admin@vuon.local','admin','active'], ['u2','Hạ Vy','mod1@vuon.local','mod','active'], ['u3','Nam Phong','mod2@vuon.local','mod','muted'], ['u4','Thảo Chi','editor1@vuon.local','editor','active'], ['u5','Minh Lam','editor2@vuon.local','editor','active'], ['u6','Mộc Miên','author1@vuon.local','author','active'], ['u7','Tú Anh','author2@vuon.local','author','active'], ['u8','Gia Hân','author3@vuon.local','author','active'], ['u9','Yến Nhi','beta1@vuon.local','beta','active'], ['u10','Khánh Ly','beta2@vuon.local','beta','active'], ['u11','An Nhiên','member1@vuon.local','author','banned']
-].map(([id,name,email,role,status], i) => ({ id, name, email, role: role as AdminUser['role'], status: status as AdminUser['status'], twoFactor: true, lastLoginAt: isoAgo(i), createdAt: isoAgo(200+i) }));
-
 const rights = ['own','agreement','public_domain','open_license','other'] as const;
 export const adminStories: StoryAdmin[] = stories.map((s, i) => ({ ...s, visibility: i % 5 === 0 ? 'draft' : i % 7 === 0 ? 'hidden' : 'public', featured: i < 4, assigneeIds: [`u${4 + i % 5}`], rightsType: i < 3 ? undefined : rights[i % rights.length], rightsNote: i < 3 || rights[i % rights.length] === 'own' ? undefined : 'Hồ sơ cho phép hư cấu số ' + (i + 1), rightsExpiresAt: i === 3 || i === 4 ? new Date(now.getTime() + (12+i) * 86400000).toISOString() : undefined, skipTranslate: i % 4 === 0 }));
 

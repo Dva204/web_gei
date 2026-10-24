@@ -1,4 +1,6 @@
+'use client';
 import Image from 'next/image';
+import { useState } from 'react';
 import type { ComicPage } from '@/features/catalog/types/chapter';
 import { AdSlot } from '@/features/advertising/components/AdSlot';
 export function ChapterContent({ pages }: { pages: ComicPage[] }) {
@@ -10,18 +12,43 @@ export function ChapterContent({ pages }: { pages: ComicPage[] }) {
           {i === mid && (
             <AdSlot placement="chapter-mid" pageCount={pages.length} />
           )}
-          <Image
-            src={page.image}
-            width={page.width}
-            height={page.height}
-            sizes="(max-width: 768px) 100vw, 900px"
-            priority={i === 0}
-            loading={i === 0 ? 'eager' : 'lazy'}
-            alt={page.alt}
-            className="block h-auto w-full"
-          />
+          <ComicImage page={page} first={i === 0} />
         </div>
       ))}
     </div>
+  );
+}
+function ComicImage({ page, first }: { page: ComicPage; first: boolean }) {
+  const [failed, setFailed] = useState(false),
+    [attempt, setAttempt] = useState(0);
+  return failed ? (
+    <div className="reader-error" role="alert">
+      <p>Không tải được ảnh: {page.alt}</p>
+      <button
+        className="btn"
+        onClick={() => {
+          setFailed(false);
+          setAttempt((value) => value + 1);
+        }}
+      >
+        Tải lại ảnh
+      </button>
+    </div>
+  ) : (
+    <Image
+      key={attempt}
+      src={page.image}
+      width={page.width}
+      height={page.height}
+      sizes="(max-width: 768px) 100vw, 900px"
+      priority={first}
+      loading={first ? 'eager' : 'lazy'}
+      alt={page.alt}
+      className="block h-auto w-full"
+      unoptimized={
+        page.image.startsWith('data:') || page.image.startsWith('blob:')
+      }
+      onError={() => setFailed(true)}
+    />
   );
 }

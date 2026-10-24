@@ -3,8 +3,11 @@ import { defaultAdvertising, PLACEMENT_IDS } from './defaults';
 
 export const ADVERTISING_KEY = 'vuon-advertising-v1';
 const CHANGE_EVENT = 'vuon-advertising-change';
+const CLIENT_KEY = 'vuon-advertising-client-v1';
 let cachedRaw: string | null | undefined;
 let cached: AdvertisingConfig | null = null;
+let hydrationGeneration = 0;
+let publicHydration: Promise<AdvertisingConfig> | null = null;
 const knownPlacements = (value: unknown): value is AdPlacement[] =>
   Array.isArray(value) && value.every((p) => PLACEMENT_IDS.includes(p));
 const imageValue = (value: unknown) =>
@@ -15,6 +18,7 @@ function validConfig(value: unknown): value is AdvertisingConfig {
   const v = value as AdvertisingConfig;
   return (
     v.version === 1 &&
+    (v.serverRevision === undefined || (Number.isInteger(v.serverRevision) && v.serverRevision >= 0)) &&
     typeof v.enabled === 'boolean' &&
     typeof v.premiumDemo === 'boolean' &&
     typeof v.premiumHidesAffiliate === 'boolean' &&
@@ -77,6 +81,7 @@ function validConfig(value: unknown): value is AdvertisingConfig {
         Number.isFinite(p.price) &&
         ['Shopee', 'TikTok Shop'].includes(p.program) &&
         typeof p.enabled === 'boolean' &&
+        (p.targetUrl === undefined || typeof p.targetUrl === 'string') &&
         imageValue(p.image),
     ) &&
     v.events.every(
@@ -170,6 +175,36 @@ export function updateAdvertising(
   window.dispatchEvent(new Event(CHANGE_EVENT));
   return next;
 }
+export function replaceAdvertisingSnapshot(next: AdvertisingConfig) {
+  if (!validConfig(next)) throw new Error('Cấu hình quảng cáo từ máy chủ không hợp lệ.');
+  const current = getAdvertisingSnapshot();
+  const value = { ...next, premiumDemo: current?.premiumDemo ?? false };
+  const raw = JSON.stringify(value);
+  localStorage.setItem(ADVERTISING_KEY, raw);
+  cachedRaw = raw;
+  cached = value;
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+  return value;
+}
+async function remote<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
+  const response = await fetch(path, { method, credentials: 'same-origin', cache: 'no-store', ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }) });
+  const result = await response.json().catch(() => null);
+  if (!response.ok || !result || !('data' in result)) throw new Error(result?.error?.message || 'Không kết nối được máy chủ quảng cáo.');
+  return result.data as T;
+}
+export async function hydrateAdvertising(admin = false) {
+  if (!admin && publicHydration) return publicHydration;
+  const generation = ++hydrationGeneration;
+  const task = remote<AdvertisingConfig>(admin ? '/api/admin/advertising/config' : '/api/advertising/config').then((config) => generation === hydrationGeneration ? replaceAdvertisingSnapshot(config) : config);
+  if (!admin) publicHydration = task.finally(() => { publicHydration = null; });
+  return task;
+}
+export async function persistAdvertising(config: AdvertisingConfig, summary: string) {
+  const payload = { ...config, events: [], audit: [] };
+  const saved = await remote<AdvertisingConfig>('/api/admin/advertising/config', 'PUT', { config: payload, revision: config.serverRevision ?? 0, summary });
+  const current = getAdvertisingSnapshot();
+  return replaceAdvertisingSnapshot({ ...saved, premiumDemo: config.premiumDemo, events: current?.events ?? [], audit: current?.audit ?? [] });
+}
 export function newId() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -192,6 +227,12 @@ export function recordAdEvent(
         },
       ].slice(-3000),
     }));
+    let clientId = localStorage.getItem(CLIENT_KEY);
+    if (!clientId || !/^[A-Za-z0-9_-]{16,80}$/.test(clientId)) {
+      clientId = crypto.randomUUID().replaceAll('-', '');
+      localStorage.setItem(CLIENT_KEY, clientId);
+    }
+    void remote('/api/advertising/events', 'POST', { creativeId, placement, kind, clientId }).catch(() => undefined);
   } catch {
     /* Optional local telemetry must never interrupt reading. */
   }

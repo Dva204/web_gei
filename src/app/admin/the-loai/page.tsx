@@ -1,1 +1,4 @@
-import { ModuleHub } from '@/features/admin/components/common/ModuleHub'; export default function Page(){return <ModuleHub kind="taxonomy"/>}
+import { requireStaffPage } from '@/server/auth/authorization';
+import { TaxonomyManager } from '@/features/admin/components/stories/TaxonomyManager'; export default async function Page(){
+await requireStaffPage('taxonomy.manage');
+return <TaxonomyManager kind="genres"/>}

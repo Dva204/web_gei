@@ -27,10 +27,11 @@ export interface ChatClient {
     content: string,
     replyToId?: string,
   ): Promise<
-    | { ok: true }
+    | { ok: true; message: ChatMessage }
     | {
         ok: false;
         reason: 'slow_mode' | 'muted' | 'banned' | 'too_long' | 'offline';
+        message?: string;
       }
   >;
   loadOlder(

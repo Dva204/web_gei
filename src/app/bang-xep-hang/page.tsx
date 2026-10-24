@@ -1,5 +1,6 @@
 import { getRanking } from '@/features/catalog/services';
 import Link from 'next/link';
+export const dynamic = 'force-dynamic';
 export default async function Ranking({
   searchParams,
 }: {
@@ -10,6 +11,7 @@ export default async function Ranking({
   return (
     <div className="container section">
       <h1 className="section-title">Bảng xếp hạng</h1>
+      <p className="muted mb-4">Hiện xếp theo tổng lượt xem. Thống kê riêng ngày/tuần/tháng sẽ bổ sung ở phần thống kê backend.</p>
       <div className="mb-6 flex gap-2">
         {[
           ['day', 'Ngày'],

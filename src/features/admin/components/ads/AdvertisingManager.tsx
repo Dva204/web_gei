@@ -1,6 +1,7 @@
 'use client';
 import {
   useState,
+  useEffect,
   useSyncExternalStore,
   type FormEvent,
   type ReactNode,
@@ -34,7 +35,7 @@ import {
   localDate,
   resolveAdvertisement,
 } from '@/features/advertising/lib/rules';
-import { newId, updateAdvertising } from '@/features/advertising/lib/store';
+import { hydrateAdvertising, newId, persistAdvertising, updateAdvertising } from '@/features/advertising/lib/store';
 import { useAdvertising } from '@/features/advertising/hooks/useAdvertising';
 import { can } from '@/features/admin/lib/permissions';
 import { getAdminSession } from '@/features/admin/services/auth';
@@ -53,11 +54,7 @@ type Commit = (
   summary: string,
 ) => boolean;
 const sessionSnapshot = () => {
-  try {
-    return localStorage.getItem('vuon-admin-session');
-  } catch {
-    return null;
-  }
+  return getAdminSession();
 };
 function subscribeSession(callback: () => void) {
   window.addEventListener('admin-session', callback);
@@ -78,7 +75,10 @@ export function AdvertisingManager({
     sessionSnapshot,
     () => null,
   );
-  const user = rawSession ? getAdminSession() : null;
+  const user = rawSession;
+  useEffect(() => {
+    if (user && can(user, 'ads.manage')) void hydrateAdvertising(true).catch(() => undefined);
+  }, [user]);
   if (!config)
     return <div className="admin-boot">Đang tải cấu hình quảng cáo…</div>;
   if (!user || !can(user, 'ads.manage'))
@@ -110,10 +110,11 @@ function AdvertisingWorkspace({
       const user = getAdminSession();
       if (!user || !can(user, 'ads.manage'))
         throw new Error('Phiên hiện tại không có quyền sửa quảng cáo.');
-      updateAdvertising(change, { userId: user.id, summary });
+      const next = updateAdvertising(change);
       setNotice({
-        text: 'Đã lưu trên trình duyệt. Trang đọc cùng địa chỉ sẽ áp dụng cấu hình mới.',
+        text: 'Đang đồng bộ cấu hình lên máy chủ…',
       });
+      void persistAdvertising(next, summary).then(() => setNotice({ text: 'Đã lưu vào PostgreSQL. Các thiết bị sẽ nhận cấu hình mới.' })).catch((failure) => setNotice({ text: (failure as Error).message, error: true }));
       return true;
     } catch (error) {
       setNotice({
@@ -142,7 +143,7 @@ function AdvertisingWorkspace({
     <div className="ad-admin">
       <PageHeader
         title={affiliate ? 'Affiliate · góc mua sắm' : 'Quảng cáo & nguồn thu'}
-        description="Quản lý bản thử nghiệm frontend · chưa kết nối nền tảng, đơn hàng hoặc thanh toán."
+        description="Cấu hình đồng bộ PostgreSQL · chưa kết nối API đơn hàng hoặc thanh toán của nền tảng."
         actions={
           <Link
             href={affiliate ? '/admin/quang-cao' : '/admin/affiliate'}
@@ -155,11 +156,11 @@ function AdvertisingWorkspace({
       <div className="ad-demo-banner">
         <span>
           <BadgeCheck size={20} />
-          <strong>Sandbox frontend</strong>
+          <strong>Dữ liệu máy chủ</strong>
         </span>
         <p>
-          Dữ liệu chỉ thuộc trình duyệt và địa chỉ hiện tại. Localhost, ngrok và
-          iPhone có kho dữ liệu riêng. Không có mã quảng cáo bên thứ ba.
+          Cấu hình, thống kê nội bộ và doanh thu nhập tay được đồng bộ giữa các
+          thiết bị. Không thực thi mã quảng cáo bên thứ ba.
         </p>
         <Link href="/" target="_blank" rel="noopener" className="btn">
           Mở trang đọc ↗
@@ -175,15 +176,15 @@ function AdvertisingWorkspace({
           icon={Megaphone}
         />
         <StatCard
-          label="Hiển thị FE"
+          label="Hiển thị nội bộ"
           value={String(impressions)}
           detail="Khối hiện ≥ 50% trong 1 giây"
           icon={Eye}
         />
         <StatCard
-          label="Lượt nhấn FE"
+          label="Lượt nhấn nội bộ"
           value={String(clicks)}
-          detail="Nhấn nút mẫu, không phải chuyển đổi"
+          detail="Không đồng nghĩa đơn hàng hợp lệ"
           icon={MousePointer2}
         />
         <StatCard
@@ -1073,6 +1074,7 @@ function ProductsPanel({
               image: '',
               enabled: true,
               placements: ['home-affiliate'],
+              targetUrl: '',
             })
           }
         >
@@ -1250,6 +1252,16 @@ function ProductForm({
           onChange={(e) => field('description', e.target.value)}
         />
       </label>
+      <label>
+        Link affiliate HTTPS
+        <input
+          type="url"
+          maxLength={1000}
+          placeholder={value.program === 'Shopee' ? 'https://s.shopee.vn/…' : 'https://shop.tiktok.com/…'}
+          value={value.targetUrl || ''}
+          onChange={(e) => field('targetUrl', e.target.value)}
+        />
+      </label>
       <ImageField
         value={value.image}
         onChange={(image) => field('image', image)}
@@ -1264,8 +1276,8 @@ function ProductForm({
         onChange={(placements) => field('placements', placements)}
       />
       <p className="ad-help">
-        Chưa nhập link, theo dõi đơn hàng hoặc hoa hồng thật. Nút chỉ thử tương
-        tác.
+        Chỉ chấp nhận link HTTPS thuộc Shopee hoặc TikTok. Hệ thống ghi lượt
+        nhấn nội bộ, chưa theo dõi đơn hàng hoặc hoa hồng thật.
       </p>
       <div className="ad-actions">
         <button className="btn btn-primary">

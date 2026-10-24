@@ -1,47 +1,72 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Heart } from 'lucide-react';
-export function BookmarkButton({ storyId, variant = 'default' }: { storyId: string, variant?: 'default' | 'icon' }) {
-  const [saved, setSaved] = useState(false);
-  useEffect(() => {
+import { useLibrary } from '../hooks/useLibrary';
+import { readBookmarks, writeLibrary } from '../lib/storage';
+import { setRemoteBookmark } from '../services/client';
+import { LIBRARY_EVENT } from '../lib/storage';
+export function BookmarkButton({
+  storyId,
+  variant = 'default',
+}: {
+  storyId: string;
+  variant?: 'default' | 'icon';
+}) {
+  const { bookmarks, remote, ready, error: syncError } = useLibrary(),
+    saved = bookmarks.includes(storyId);
+  const [error, setError] = useState(''),
+    [busy, setBusy] = useState(false);
+  async function toggle() {
+    if (busy || !ready) return;
+    if (syncError) {
+      setError(syncError);
+      return;
+    }
+    setBusy(true);
     try {
-      setSaved(
-        (
-          JSON.parse(
-            localStorage.getItem('bookmarks') || '{"version":1,"items":[]}',
-          ).items as string[]
-        ).includes(storyId),
-      );
-    } catch {}
-  }, [storyId]);
-  function toggle() {
-    let items: string[] = [];
-    try {
-      items =
-        JSON.parse(localStorage.getItem('bookmarks') || '{"items":[]}').items ||
-        [];
-    } catch {}
-    items = saved ? items.filter((x) => x !== storyId) : [...items, storyId];
-    localStorage.setItem('bookmarks', JSON.stringify({ version: 1, items }));
-    setSaved(!saved);
+      if (remote) {
+        await setRemoteBookmark(storyId, !saved);
+        window.dispatchEvent(new Event(LIBRARY_EVENT));
+      } else {
+        const current = readBookmarks();
+        writeLibrary(
+          'bookmarks',
+          current.includes(storyId)
+            ? current.filter((id) => id !== storyId)
+            : [...current, storyId],
+        );
+      }
+      setError('');
+    } catch (failure) {
+      setError((failure as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
-
-  if (variant === 'icon') {
-    return (
-      <button 
-        onClick={toggle}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
-        aria-label="Lưu vào tủ"
-      >
-        <Heart size={18} fill={saved ? 'currentColor' : 'none'} className={saved ? 'text-pink-500' : ''} />
-      </button>
-    );
-  }
-
   return (
-    <button className={saved ? 'btn btn-primary' : 'btn'} onClick={toggle}>
-      <Heart size={18} fill={saved ? 'currentColor' : 'none'} />
-      {saved ? 'Đã lưu' : 'Lưu vào tủ'}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => void toggle()}
+        disabled={busy || !ready}
+        className={
+          variant === 'icon'
+            ? 'btn bookmark-icon'
+            : saved
+              ? 'btn btn-primary'
+              : 'btn'
+        }
+        aria-label={saved ? 'Bỏ lưu khỏi tủ' : 'Lưu vào tủ'}
+        aria-pressed={saved}
+      >
+        <Heart size={18} fill={saved ? 'currentColor' : 'none'} />
+        {variant !== 'icon' && (saved ? 'Đã lưu' : 'Lưu vào tủ')}
+      </button>
+      {error && (
+        <p className="text-danger text-xs" role="alert">
+          {error}
+        </p>
+      )}
+    </>
   );
 }

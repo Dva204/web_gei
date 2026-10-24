@@ -1,12 +1,96 @@
-import type { ChapterAdmin, ChapterStatus, ChapterVersion, Paginated } from '@/features/admin/types';
-import { adminChapters, delay, writeAudit } from '../mocks/store';
-const versions:ChapterVersion[]=[];
-export async function listChaptersAdmin(storyId:string,q:{status?:string;assigneeId?:string;page?:number;pageSize?:number}):Promise<Paginated<ChapterAdmin>>{await delay();const page=q.page??1,size=q.pageSize??20,all=adminChapters.filter(c=>c.storyId===storyId&&(!q.status||c.status===q.status)&&(!q.assigneeId||c.assigneeId===q.assigneeId));return{items:all.slice((page-1)*size,page*size),page,pageSize:size,total:all.length,totalPages:Math.ceil(all.length/size)}}
-export async function getChapterAdmin(storyId:string,n:number){await delay();return adminChapters.find(c=>c.storyId===storyId&&c.number===n)??null}
-export async function saveChapter(input:ChapterAdmin){await delay();const old=adminChapters.find(c=>c.storyId===input.storyId&&c.number===input.number);if(old)versions.unshift({id:crypto.randomUUID(),storyId:old.storyId,number:old.number,content:old.content,savedAt:new Date().toISOString(),savedBy:old.updatedBy});const i=adminChapters.findIndex(c=>c.storyId===input.storyId&&c.number===input.number);const next={...input,wordCount:input.content.trim().split(/\s+/).filter(Boolean).length,updatedAt:new Date().toISOString()};if(i>=0)adminChapters[i]=next;else adminChapters.push(next);writeAudit('save','chapter',`${input.storyId}-${input.number}`,`Lưu chương ${input.number}`);return next}
-const order:ChapterStatus[]=['draft','translating','editing','beta','ready','published'];
-export async function changeChapterStatus(storyId:string,n:number,to:ChapterStatus,note?:string,publishAt?:string){const chapter=await getChapterAdmin(storyId,n);if(!chapter)throw new Error('Không tìm thấy chương.');const fromIndex=order.indexOf(chapter.status),toIndex=order.indexOf(to);if(toIndex>=0&&fromIndex>=0&&toIndex<fromIndex&&!note?.trim())throw new Error('Cần ghi chú khi trả bài về bước trước.');const next=await saveChapter({...chapter,status:to,publishAt:to==='scheduled'?publishAt:undefined,publishedAt:to==='published'?new Date().toISOString():chapter.publishedAt});writeAudit('status','chapter',`${storyId}-${n}`,`${chapter.status} → ${to}${note?`: ${note}`:''}`);return next}
-export async function listVersions(storyId:string,n:number){await delay();return versions.filter(v=>v.storyId===storyId&&v.number===n)}
-export async function restoreVersion(versionId:string){const v=versions.find(x=>x.id===versionId);if(!v)throw new Error('Không tìm thấy phiên bản.');const chapter=await getChapterAdmin(v.storyId,v.number);if(!chapter)throw new Error('Không tìm thấy chương.');return saveChapter({...chapter,content:v.content})}
-export async function findReplaceInStory(storyId:string,find:string,replace:string,opts:{dryRun:boolean}){await delay();const targets=adminChapters.filter(c=>c.storyId===storyId&&c.content.includes(find));const matches=targets.reduce((n,c)=>n+c.content.split(find).length-1,0);if(!opts.dryRun){targets.forEach(c=>c.content=c.content.split(find).join(replace));writeAudit('replace','story',storyId,`Thay ${matches} kết quả`)}return{matches,chapters:targets.length}}
-export async function renumberChapters(storyId:string,mapping:Record<number,number>){await delay();adminChapters.filter(c=>c.storyId===storyId).forEach(c=>{if(mapping[c.number])c.number=mapping[c.number]});writeAudit('renumber','story',storyId,'Đánh số lại chương')}
+import type { ChapterAdmin, ChapterVersion, Paginated } from '../types';
+import type { ComicPage } from '@/features/catalog/types/chapter';
+import { adminApi, queryString } from './http';
+const base = (storyId: string) =>
+  '/api/admin/stories/' + encodeURIComponent(storyId) + '/chapters';
+export const listChaptersAdmin = (
+  storyId: string,
+  query: { status?: string; page?: number; pageSize?: number } = {},
+) =>
+  adminApi<Paginated<ChapterAdmin> & { nextNumber: number }>(
+    base(storyId) + queryString(query),
+  );
+export const getChapterAdmin = (storyId: string, number: number) =>
+  adminApi<ChapterAdmin>(base(storyId) + '/' + number);
+export const saveChapter = (chapter: ChapterAdmin) =>
+  adminApi<ChapterAdmin>(
+    base(chapter.storyId) + (chapter.id ? '/' + chapter.number : ''),
+    chapter.id ? 'PUT' : 'POST',
+    {
+      title: chapter.title || '',
+      status: ['published', 'scheduled'].includes(chapter.status)
+        ? 'draft'
+        : chapter.status,
+      pageKeys: (chapter.pages || []).map((page) => page.storageKey),
+      ...(chapter.id
+        ? { revision: chapter.revision }
+        : { number: chapter.number }),
+    },
+  );
+export const publicationAction = (
+  chapter: ChapterAdmin,
+  action: 'publish' | 'unpublish' | 'schedule' | 'cancel',
+  publishAt?: string,
+) =>
+  adminApi<ChapterAdmin>(
+    base(chapter.storyId) + '/' + chapter.number + '/publication',
+    'POST',
+    { action, revision: chapter.revision, ...(publishAt ? { publishAt } : {}) },
+  );
+export const deleteChapter = (chapter: ChapterAdmin) =>
+  adminApi(base(chapter.storyId) + '/' + chapter.number, 'DELETE', {
+    revision: chapter.revision,
+  });
+export const listVersions = (storyId: string, number: number) =>
+  adminApi<ChapterVersion[]>(base(storyId) + '/' + number + '/versions');
+export const restoreVersion = (chapter: ChapterAdmin, versionId: string) =>
+  adminApi<ChapterAdmin>(
+    base(chapter.storyId) + '/' + chapter.number + '/versions',
+    'POST',
+    { versionId, revision: chapter.revision },
+  );
+export async function uploadComicImages(
+  storyId: string,
+  files: File[],
+  kind: 'comic' | 'covers' = 'comic',
+): Promise<ComicPage[]> {
+  if (
+    files.length > 600 ||
+    files.reduce((sum, file) => sum + file.size, 0) > 100 * 1024 * 1024
+  )
+    throw new Error('Mỗi lần chọn tối đa 600 ảnh và 100 MB.');
+  for (const file of files)
+    if (
+      !['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ||
+      !file.size ||
+      file.size > 10 * 1024 * 1024
+    )
+      throw new Error(file.name + ': chỉ nhận PNG/JPG/WebP, tối đa 10 MB/ảnh.');
+  const sorted = [...files].sort((a, b) =>
+      a.name.localeCompare(b.name, 'vi', { numeric: true }),
+    ),
+    result: ComicPage[] = [];
+  for (
+    let index = 0;
+    index < sorted.length;
+    index += kind === 'covers' ? 1 : 2
+  ) {
+    const form = new FormData();
+    form.set('kind', kind);
+    sorted
+      .slice(index, index + (kind === 'covers' ? 1 : 2))
+      .forEach((file) => form.append('files', file));
+    const response = await fetch(
+      '/api/admin/stories/' + encodeURIComponent(storyId) + '/media',
+      { method: 'POST', credentials: 'same-origin', body: form },
+    );
+    const body = await response.json().catch(() => null);
+    if (!response.ok || !Array.isArray(body?.data))
+      throw new Error(
+        body?.error?.message ||
+          'Upload chưa hoàn tất. Các ảnh đã upload trước đó vẫn được giữ trên máy chủ.',
+      );
+    result.push(...body.data);
+  }
+  return result;
+}

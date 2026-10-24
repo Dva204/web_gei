@@ -25,12 +25,13 @@ export function AdCreative({
   preview?: boolean;
 }) {
   const [notice, setNotice] = useState('');
-  function activate(id: string) {
+  function activate(id: string, targetUrl?: string) {
     onAction?.(id);
+    if (!preview && targetUrl) window.open(targetUrl, '_blank', 'noopener,noreferrer');
     setNotice(
       preview
         ? 'Bản xem trước, không ghi nhận lượt nhấn.'
-        : 'Đây là nội dung mẫu. Chưa liên kết cửa hàng hoặc nhà quảng cáo thật.',
+        : targetUrl ? 'Đã mở trang sản phẩm. Website có thể nhận hoa hồng nếu đơn đủ điều kiện.' : 'Sản phẩm chưa được gắn liên kết cửa hàng.',
     );
   }
   return (
@@ -71,17 +72,17 @@ export function AdCreative({
                   <button
                     type="button"
                     className="btn"
-                    onClick={() => activate(product.id)}
+                    onClick={() => activate(product.id, product.targetUrl)}
                   >
-                    Xem sản phẩm mẫu <ArrowUpRight size={16} />
+                    Xem sản phẩm <ArrowUpRight size={16} />
                   </button>
                 </div>
               </article>
             ))}
           </div>
           <p className="ad-fineprint">
-            Sản phẩm và giá chỉ để minh họa. Khi tích hợp thật, website có thể
-            nhận hoa hồng từ đơn hàng hợp lệ.
+            Giá có thể thay đổi tại gian hàng. Website có thể nhận hoa hồng từ
+            đơn hàng affiliate đủ điều kiện.
           </p>
         </>
       ) : (

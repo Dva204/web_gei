@@ -1,0 +1,11 @@
+BEGIN;
+ALTER TABLE "Story" ADD COLUMN "searchTitle" TEXT NOT NULL DEFAULT '', ADD COLUMN "deletedAt" TIMESTAMP(3), ADD COLUMN "revision" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "Author" ADD COLUMN "searchName" TEXT NOT NULL DEFAULT '', ADD COLUMN "deletedAt" TIMESTAMP(3), ADD COLUMN "revision" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "Genre" ADD COLUMN "deletedAt" TIMESTAMP(3), ADD COLUMN "revision" INTEGER NOT NULL DEFAULT 1;
+UPDATE "Story" SET "searchTitle" = translate(lower("title"), 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ', 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd');
+UPDATE "Author" SET "searchName" = translate(lower("name"), 'àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ', 'aaaaaaaaaaaaaaaaaeeeeeeeeeeeiiiiiooooooooooooooooouuuuuuuuuuuyyyyyd');
+ALTER TABLE "Story" ADD CONSTRAINT "Story_revision_positive" CHECK ("revision" > 0);
+ALTER TABLE "Author" ADD CONSTRAINT "Author_revision_positive" CHECK ("revision" > 0);
+ALTER TABLE "Genre" ADD CONSTRAINT "Genre_revision_positive" CHECK ("revision" > 0);
+CREATE INDEX "Story_deletedAt_visibility_updatedAt_idx" ON "Story"("deletedAt", "visibility", "updatedAt");
+COMMIT;

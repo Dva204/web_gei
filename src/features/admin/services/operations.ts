@@ -9,25 +9,18 @@ import type {
   Role,
   SiteSettings,
   StatsBundle,
+  DashboardOverview,
 } from '@/features/admin/types';
 import {
   adSlots,
   adminStories,
-  adminUsers,
   affiliateLinks,
-  auditLogs,
   campaigns,
   delay,
   manualRevenue,
-  settings,
-  setSettings,
   writeAudit,
 } from '../mocks/store';
-import {
-  getAdvertisingSnapshot,
-  updateAdvertising,
-} from '@/features/advertising/lib/store';
-import { getAdminSession } from './auth';
+import { adminApi, queryString } from './http';
 export async function listUsers(q: {
   search?: string;
   role?: string;
@@ -35,45 +28,22 @@ export async function listUsers(q: {
   page?: number;
   pageSize?: number;
 }): Promise<Paginated<AdminUser>> {
-  await delay();
-  const all = adminUsers.filter(
-    (u) =>
-      (!q.search || u.name.toLowerCase().includes(q.search.toLowerCase())) &&
-      (!q.role || u.role === q.role) &&
-      (!q.status || u.status === q.status),
-  );
-  return {
-    items: all,
-    page: 1,
-    pageSize: 20,
-    total: all.length,
-    totalPages: 1,
-  };
+  return adminApi<Paginated<AdminUser>>('/api/admin/users' + queryString(q));
 }
 export async function sanctionUser(
   id: string,
   action: 'warn' | 'mute' | 'ban' | 'restore',
   opts?: { reason?: string },
 ) {
-  if (!opts?.reason?.trim()) throw new Error('Cần nhập lý do.');
-  await delay();
-  const u = adminUsers.find((x) => x.id === id);
-  if (u)
-    u.status =
-      action === 'restore'
-        ? 'active'
-        : action === 'ban'
-          ? 'banned'
-          : action === 'mute'
-            ? 'muted'
-            : u.status;
-  writeAudit(action, 'user', id, opts.reason);
+  const reason = opts?.reason?.trim();
+  if (!reason || reason.length < 8) throw new Error('Cần nhập lý do ít nhất 8 ký tự.');
+  if (action === 'warn') throw new Error('Cảnh báo qua email chưa được triển khai.');
+  const status = action === 'restore' ? 'active' : action === 'mute' ? 'suspended' : 'disabled';
+  return adminApi<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}/status`, 'PATCH', { status, reason });
 }
-export async function changeRole(id: string, role: Role) {
-  await delay();
-  const u = adminUsers.find((x) => x.id === id);
-  if (u) u.role = role;
-  writeAudit('change_role', 'user', id, `Đổi vai trò thành ${role}`);
+export async function changeRole(id: string, role: Role, reason: string) {
+  if (reason.trim().length < 8) throw new Error('Cần nhập lý do ít nhất 8 ký tự.');
+  return adminApi<AdminUser>(`/api/admin/users/${encodeURIComponent(id)}/role`, 'PATCH', { role, reason: reason.trim() });
 }
 export async function listSlots() {
   await delay();
@@ -119,69 +89,25 @@ export async function saveManualRevenue(input: ManualRevenue) {
   return input;
 }
 export async function getStats(
-  _range: string,
+  range: string,
   _scope?: string,
 ): Promise<StatsBundle> {
-  await delay();
-  return {
-    views: 128450,
-    readers: 34920,
-    avgReadMinutes: 18.4,
-    previousDelta: 12.6,
-    series: Array.from({ length: 7 }, (_, i) => ({
-      label: `T${i + 2}`,
-      value: 12000 + i * 1700 + (i % 2) * 2300,
-    })),
-    topStories: adminStories
-      .slice(0, 5)
-      .map((s) => ({ name: s.title, views: s.views })),
-    dropOff: adminStories
-      .slice(4, 9)
-      .map((s, i) => ({ story: s.title, chapter: i + 3, rate: 18 + i * 4.2 })),
-  };
+  return adminApi<StatsBundle>('/api/admin/operations/stats' + queryString({ range }));
 }
+export const getDashboardOverview = () => adminApi<DashboardOverview>('/api/admin/operations/dashboard');
 export async function getSettings() {
-  await delay();
-  return {
-    ...settings,
-    adsEnabled: getAdvertisingSnapshot()?.enabled ?? settings.adsEnabled,
-  };
+  return adminApi<SiteSettings>('/api/admin/operations/settings');
 }
 export async function saveSettings(input: SiteSettings) {
-  await delay();
-  updateAdvertising((current) => ({ ...current, enabled: input.adsEnabled }), {
-    userId: getAdminSession()?.id ?? 'demo',
-    summary: 'Lưu công tắc quảng cáo từ cài đặt chung',
-  });
-  setSettings(input);
-  writeAudit('save', 'settings', 'site', 'Lưu cài đặt');
-  return input;
+  const { revision, ...settingsInput } = input;
+  return adminApi<SiteSettings>('/api/admin/operations/settings', 'PUT', { settings: settingsInput, revision });
 }
 export async function listAudit(q: {
   search?: string;
   page?: number;
   pageSize?: number;
 }): Promise<Paginated<AuditLog>> {
-  await delay();
-  const ads: AuditLog[] = (getAdvertisingSnapshot()?.audit ?? []).map((x) => ({
-    ...x,
-    action: 'save',
-    objectType: 'advertising',
-    objectId: 'frontend',
-  }));
-  const all = [...ads, ...auditLogs]
-    .sort((a, b) => b.at.localeCompare(a.at))
-    .filter(
-      (x) =>
-        !q.search || x.summary.toLowerCase().includes(q.search.toLowerCase()),
-    );
-  return {
-    items: all,
-    page: 1,
-    pageSize: 30,
-    total: all.length,
-    totalPages: 1,
-  };
+  return adminApi<Paginated<AuditLog>>('/api/admin/operations/audit' + queryString(q));
 }
 export async function exportStory(id: string, format: 'txt' | 'md' | 'json') {
   const story = adminStories.find((s) => s.id === id);
@@ -195,7 +121,15 @@ export async function exportStory(id: string, format: 'txt' | 'md' | 'json') {
   );
 }
 export async function exportAll() {
-  return new Blob([JSON.stringify({ stories: adminStories }, null, 2)], {
+  const data = await adminApi<unknown>('/api/admin/operations/export');
+  return new Blob([JSON.stringify(data, null, 2)], {
     type: 'application/json',
   });
 }
+
+export type ManagedContent = { id: string; key: string; title: string; content: string; enabled: boolean; revision: number; updatedAt: string };
+export type ManagedRedirect = { id: string; sourcePath: string; targetPath: string; statusCode: 301 | 302; enabled: boolean; hitCount: number; revision: number; updatedAt: string };
+export const listManagedContent = () => adminApi<ManagedContent[]>('/api/admin/operations/content');
+export const saveManagedContent = (input: Partial<ManagedContent>) => adminApi<ManagedContent>('/api/admin/operations/content', input.id ? 'PUT' : 'POST', input);
+export const listManagedRedirects = () => adminApi<ManagedRedirect[]>('/api/admin/operations/redirects');
+export const saveManagedRedirect = (input: Partial<ManagedRedirect>) => adminApi<ManagedRedirect>('/api/admin/operations/redirects', input.id ? 'PUT' : 'POST', input);

@@ -43,90 +43,239 @@ enum RightsType {
   other
 }
 
-model Author {
+enum UserRole {
+  member
+  admin
+  mod
+  editor
+  author
+  beta
+}
+
+enum UserStatus {
+  active
+  suspended
+  disabled
+}
+
+enum AssignmentKind {
+  author
+  beta
+}
+
+model User {
+  id                       String               @id @default(cuid())
+  email                    String               @unique
+  name                     String
+  passwordHash             String?
+  emailVerified            DateTime?
+  role                     UserRole             @default(member)
+  status                   UserStatus           @default(active)
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  sessions                 Session[]
+  assignments              StoryAssignment[]
+  bookmarks                Bookmark[]
+  history                  ReadingHistory[]
+  auditLogs                AuditLog[]
+  publications             ChapterPublication[]
+  mediaAssets              MediaAsset[]
+  importJobs               ImportJob[]
+  comments                 Comment[]            @relation("CommentAuthor")
+  commentLikes             CommentLike[]
+  commentReports           CommentReport[]
+  chapterReports           ChapterReport[]      @relation("ChapterReportReporter")
+  assignedChapterReports   ChapterReport[]      @relation("ChapterReportAssignee")
+  takedownEvents           TakedownEvent[]
+  chatMessages             ChatMessage[]        @relation("ChatAuthor")
+  chatReports              ChatReport[]         @relation("ChatReporter")
+  resolvedChatReports      ChatReport[]         @relation("ChatResolver")
+  advertisingUpdates       AdvertisingConfig[]  @relation("AdvertisingUpdater")
+  advertisingEvents        AdvertisingEvent[]
+  siteConfigurationUpdates SiteConfiguration[]  @relation("SiteConfigurationUpdater")
+  pageViews                PageView[]
+
+  @@index([role, status])
+}
+
+// Cookie carries a random opaque token; only its digest is stored here.
+model Session {
   id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  bio       String?
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  stories   Story[]
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model StoryAssignment {
+  userId    String
+  storyId   String
+  kind      AssignmentKind
+  createdAt DateTime       @default(now())
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story     Story          @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  @@id([userId, storyId, kind])
+  @@index([storyId, kind])
+}
+
+model AuthRateLimit {
+  key         String   @id
+  hits        Int      @default(0)
+  windowStart DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+}
+
+model Author {
+  id         String    @id @default(cuid())
+  name       String
+  slug       String    @unique
+  bio        String?
+  searchName String    @default("")
+  deletedAt  DateTime?
+  revision   Int       @default(1)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  stories    Story[]
 
   @@index([name])
 }
 
 model Genre {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
+  id          String       @id @default(cuid())
+  name        String       @unique
+  slug        String       @unique
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  revision    Int          @default(1)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   stories     StoryGenre[]
 }
 
 model Story {
-  id              String          @id @default(cuid())
-  slug            String          @unique
+  id              String            @id @default(cuid())
+  slug            String            @unique
   title           String
-  synopsis        String          @db.Text
+  searchTitle     String            @default("")
+  deletedAt       DateTime?
+  revision        Int               @default(1)
+  synopsis        String            @db.Text
   coverStorageKey String?
-  status          StoryStatus     @default(ongoing)
-  visibility      StoryVisibility @default(draft)
+  status          StoryStatus       @default(ongoing)
+  visibility      StoryVisibility   @default(draft)
   ending          EndingType?
-  rating          Decimal         @default(0) @db.Decimal(3, 2)
-  ratingCount     Int             @default(0)
-  views           BigInt          @default(0)
-  totalChapters   Int             @default(0)
-  latestChapter   Int             @default(0)
-  featured        Boolean         @default(false)
+  rating          Decimal           @default(0) @db.Decimal(3, 2)
+  ratingCount     Int               @default(0)
+  views           BigInt            @default(0)
+  totalChapters   Int               @default(0)
+  latestChapter   Int               @default(0)
+  featured        Boolean           @default(false)
   rightsType      RightsType?
-  rightsNote      String?         @db.Text
+  rightsNote      String?           @db.Text
   rightsExpiresAt DateTime?
   seoTitle        String?
   seoDescription  String?
   authorId        String?
-  author           Author?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  author          Author?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
   genres          StoryGenre[]
   chapters        Chapter[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  assignments     StoryAssignment[]
+  bookmarks       Bookmark[]
+  history         ReadingHistory[]
+  mediaAssets     MediaAsset[]
+  importJobs      ImportJob[]
+  comments        Comment[]
+  chapterReports  ChapterReport[]
+  takedowns       TakedownRequest[]
+  pageViews       PageView[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   @@index([status, visibility])
   @@index([updatedAt])
   @@index([views])
   @@index([featured, updatedAt])
+  @@index([deletedAt, visibility, updatedAt])
 }
 
 model StoryGenre {
   storyId String
   genreId String
-  story   Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  genre   Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  genre   Genre  @relation(fields: [genreId], references: [id], onDelete: Cascade)
 
   @@id([storyId, genreId])
   @@index([genreId, storyId])
 }
 
 model Chapter {
-  id          String        @id @default(cuid())
-  storyId     String
-  number      Int
-  title       String
-  content     String        @default("") @db.Text
-  wordCount   Int           @default(0)
-  status      ChapterStatus @default(draft)
-  publishAt   DateTime?
-  publishedAt DateTime?
-  story       Story         @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  pages       ChapterPage[]
-  versions    ChapterVersion[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                String              @id @default(cuid())
+  storyId           String
+  number            Int
+  title             String              @default("")
+  content           String              @default("") @db.Text
+  wordCount         Int                 @default(0)
+  status            ChapterStatus       @default(draft)
+  publishAt         DateTime?
+  publishedAt       DateTime?
+  story             Story               @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  pages             ChapterPage[]
+  versions          ChapterVersion[]
+  publication       ChapterPublication?
+  revision          Int                 @default(1)
+  deletedAt         DateTime?
+  scheduledBy       String?
+  scheduledManifest Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  reports           ChapterReport[]
 
   @@unique([storyId, number])
   @@index([storyId, status, number])
   @@index([publishedAt])
+}
+
+// Uploads are immutable objects outside public/. URLs are served after authorization.
+model MediaAsset {
+  id         String   @id @default(cuid())
+  storyId    String
+  storageKey String   @unique
+  kind       String
+  width      Int
+  height     Int
+  fileSize   Int
+  mimeType   String   @default("image/webp")
+  alt        String   @default("")
+  createdBy  String?
+  createdAt  DateTime @default(now())
+  story      Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  uploader   User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([storyId, kind, createdAt])
+}
+
+model ImportJob {
+  id          String    @id @default(cuid())
+  storyId     String
+  userId      String
+  status      String    @default("preview")
+  payload     Json
+  created     Int       @default(0)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+  committedAt DateTime?
+  story       Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, storyId, createdAt])
+  @@index([expiresAt])
 }
 
 model ChapterPage {
@@ -146,15 +295,30 @@ model ChapterPage {
 }
 
 model ChapterVersion {
-  id        String   @id @default(cuid())
-  chapterId String
-  content   String   @db.Text
-  note      String?
-  savedBy   String?
-  savedAt   DateTime @default(now())
-  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  id           String   @id @default(cuid())
+  chapterId    String
+  content      String   @default("") @db.Text
+  pageManifest Json     @default("[]")
+  note         String?
+  savedBy      String?
+  savedAt      DateTime @default(now())
+  chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@index([chapterId, savedAt])
+}
+
+// Reader uses this immutable-until-republished snapshot, never working ChapterPage rows.
+model ChapterPublication {
+  chapterId    String   @id
+  pageManifest Json
+  revision     Int
+  publishedAt  DateTime @default(now())
+  publishedBy  String?
+  chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  publisher    User?    @relation(fields: [publishedBy], references: [id], onDelete: SetNull)
+
+  @@index([publishedAt])
+  @@index([publishedBy])
 }
 
 model Bookmark {
@@ -162,9 +326,12 @@ model Bookmark {
   userId    String
   storyId   String
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storyId])
   @@index([userId, createdAt])
+  @@index([storyId])
 }
 
 model ReadingHistory {
@@ -175,9 +342,257 @@ model ReadingHistory {
   scrollRatio Float    @default(0)
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
 
   @@unique([userId, storyId])
   @@index([userId, updatedAt])
+  @@index([storyId])
+}
+
+model Comment {
+  id            String          @id @default(cuid())
+  storyId       String
+  chapterNumber Int?
+  parentId      String?
+  userId        String?
+  content       String          @db.Text
+  isSpoiler     Boolean         @default(false)
+  status        String          @default("pending")
+  pinned        Boolean         @default(false)
+  reportCount   Int             @default(0)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  story         Story           @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  author        User?           @relation("CommentAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  parent        Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]       @relation("CommentReplies")
+  likes         CommentLike[]
+  reports       CommentReport[]
+
+  @@index([storyId, status, pinned, createdAt])
+  @@index([parentId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model CommentLike {
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([commentId, userId])
+  @@index([userId, createdAt])
+}
+
+model CommentReport {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  reason    String   @db.Text
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([createdAt])
+}
+
+model ChapterReport {
+  id             String   @id @default(cuid())
+  storyId        String
+  chapterNumber  Int
+  reporterId     String?
+  type           String
+  message        String   @db.Text
+  status         String   @default("new")
+  assigneeId     String?
+  resolutionNote String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  story          Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  chapter        Chapter  @relation(fields: [storyId, chapterNumber], references: [storyId, number], onDelete: Cascade)
+  reporter       User?    @relation("ChapterReportReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  assignee       User?    @relation("ChapterReportAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([storyId, chapterNumber, createdAt])
+  @@index([assigneeId, status])
+}
+
+model TakedownRequest {
+  id             String          @id @default(cuid())
+  storyId        String?
+  requesterName  String
+  requesterEmail String
+  organization   String?
+  targetUrls     Json
+  description    String          @db.Text
+  evidence       String?         @db.Text
+  status         String          @default("new")
+  dueAt          DateTime
+  resolutionNote String?         @db.Text
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  story          Story?          @relation(fields: [storyId], references: [id], onDelete: SetNull)
+  events         TakedownEvent[]
+
+  @@index([status, dueAt])
+  @@index([storyId, createdAt])
+  @@index([requesterEmail, createdAt])
+}
+
+model TakedownEvent {
+  id        String          @id @default(cuid())
+  requestId String
+  actorId   String?
+  action    String
+  note      String          @db.Text
+  createdAt DateTime        @default(now())
+  request   TakedownRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor     User?           @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([requestId, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model ChatRoom {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String
+  adminOnly   Boolean       @default(false)
+  slowModeSec Int           @default(5)
+  enabled     Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  messages    ChatMessage[]
+
+  @@index([enabled, createdAt])
+}
+
+model ChatMessage {
+  id        String        @id @default(cuid())
+  roomId    String
+  userId    String?
+  replyToId String?
+  content   String        @db.Text
+  status    String        @default("visible")
+  pinned    Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  room      ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  author    User?         @relation("ChatAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  replyTo   ChatMessage?  @relation("ChatReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("ChatReplies")
+  reports   ChatReport[]
+
+  @@index([roomId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([replyToId])
+}
+
+model ChatReport {
+  id             String      @id @default(cuid())
+  messageId      String
+  reporterId     String
+  reason         String      @db.Text
+  status         String      @default("open")
+  resolutionNote String?     @db.Text
+  resolvedById   String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  message        ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  reporter       User        @relation("ChatReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  resolvedBy     User?       @relation("ChatResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@unique([messageId, reporterId])
+  @@index([status, createdAt])
+  @@index([resolvedById, status])
+}
+
+model AdvertisingConfig {
+  id          String   @id
+  payload     Json
+  revision    Int      @default(1)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   User?    @relation("AdvertisingUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedById, updatedAt])
+}
+
+model AdvertisingEvent {
+  id          String   @id @default(cuid())
+  creativeId  String
+  placement   String
+  kind        String
+  visitorHash String
+  userId      String?
+  occurredAt  DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([occurredAt])
+  @@index([placement, kind, occurredAt])
+  @@index([creativeId, kind, occurredAt])
+  @@index([visitorHash, occurredAt])
+}
+
+model SiteConfiguration {
+  id          String   @id
+  payload     Json
+  revision    Int      @default(1)
+  updatedById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   User?    @relation("SiteConfigurationUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedById, updatedAt])
+}
+
+model ContentEntry {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  title     String
+  content   String   @db.Text
+  enabled   Boolean  @default(true)
+  revision  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([enabled, updatedAt])
+}
+
+model SeoRedirect {
+  id         String   @id @default(cuid())
+  sourcePath String   @unique
+  targetPath String
+  statusCode Int      @default(301)
+  enabled    Boolean  @default(true)
+  hitCount   BigInt   @default(0)
+  revision   Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([enabled, updatedAt])
+}
+
+model PageView {
+  id          String   @id @default(cuid())
+  storyId     String?
+  userId      String?
+  visitorHash String
+  path        String
+  bucket      DateTime
+  occurredAt  DateTime @default(now())
+  story       Story?   @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([visitorHash, path, bucket])
+  @@index([occurredAt])
+  @@index([storyId, occurredAt])
+  @@index([userId, occurredAt])
 }
 
 model AuditLog {
@@ -188,7 +603,9 @@ model AuditLog {
   objectId   String
   summary    String
   createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([objectType, objectId])
+  @@index([userId, createdAt])
 }

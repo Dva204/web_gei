@@ -3,7 +3,7 @@ import { listStories } from '@/features/catalog/services';
 import { StoryGrid } from '@/features/catalog/components/StoryGrid';
 import { Pagination } from '@/shared/components/Pagination';
 import type { Status } from '@/features/catalog/types/story';
-export const revalidate = 1800;
+export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: 'Danh sách truyện' };
 export default async function ListPage({
   params,
@@ -48,7 +48,7 @@ export default async function ListPage({
       <Pagination
         page={d.page}
         totalPages={d.totalPages}
-        base={`/danh-sach/${loai}`}
+        base={`/danh-sach/${loai}?${new URLSearchParams({ ...(status ? { status } : {}), ...(sort ? { sort } : {}) })}`}
       />
     </div>
   );

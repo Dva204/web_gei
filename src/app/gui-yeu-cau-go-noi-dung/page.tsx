@@ -4,6 +4,8 @@ import { submitTakedown } from '../../features/admin/actions/takedown';
 
 export default function TakedownForm() {
   const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
 
   if (done) {
     return (
@@ -17,8 +19,17 @@ export default function TakedownForm() {
   }
 
   const action = async (formData: FormData) => {
-    await submitTakedown(formData);
-    setDone(true);
+    if (busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      await submitTakedown(formData);
+      setDone(true);
+    } catch (failure) {
+      setError((failure as Error).message || 'Chưa gửi được yêu cầu. Hãy thử lại.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -42,7 +53,8 @@ export default function TakedownForm() {
           Mô tả
           <textarea name="description" className="btn" style={{ width: '100%', height: 140, justifyContent: 'start' }} required />
         </label>
-        <button type="submit" className="btn btn-primary">Gửi yêu cầu</button>
+        {error && <p role="alert" className="muted">{error}</p>}
+        <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Đang gửi…' : 'Gửi yêu cầu'}</button>
       </form>
     </section>
   );

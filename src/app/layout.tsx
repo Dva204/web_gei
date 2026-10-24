@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import '../styles/mobile.css';
 import '../styles/advertising.css';
+import '../styles/fe-improvements.css';
 import { uiFont, readFont } from './fonts';
 import { noFlashScript } from '@/shared/lib/theme/noFlashScript';
 import { Header } from '@/shared/components/layout/Header';
@@ -10,7 +11,7 @@ import { MobileNav } from '@/shared/components/layout/MobileNav';
 import { ScrollToTop } from '@/shared/components/ScrollToTop';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://vuonngontinh.example'),
+  metadataBase: new URL(process.env.SITE_URL || 'http://localhost:3000'),
   title: { default: 'Vườn Ngôn Tình', template: '%s | Vườn Ngôn Tình' },
   description: 'Website đọc truyện ngôn tình Việt với trải nghiệm đọc êm dịu.',
 };
